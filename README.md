@@ -1,2 +1,3 @@
 # CSC413FinalProject
-CSC413H5 Final Project
+Keith Allatt, Brandon Jaipersaud, David Chen, Renato Zimmermann
+
