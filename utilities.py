@@ -156,5 +156,17 @@ def top_n_error_rate(model: nn.Module, data: Dataset, n: int) -> float:
     return 0. if total == 0 else not_in_top_n / total
 
 
+def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tuple) -> nn.Sequential:
+    """Make MLP with each layer defined as a multiple of the previous.
+    """
+    layers = list()
+    prev_size = input_size
+    for mult in layer_multiples:
+        layers.append(nn.Linear(prev_size, prev_size*mult))
+        prev_size *= mult
+    layers.append(nn.Linear(prev_size, output_size))
+    return nn.Sequential(*layers)
+
+
 if __name__ == "__main__":
     pass
