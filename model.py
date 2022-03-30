@@ -5,11 +5,28 @@ from datetime import datetime
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
+from torch.utils.data import Dataset, DataLoader
 
 import matplotlib.pyplot as plt
 
+from pathlib import Path
+
 from utilities import make_layer_mult_mlp, estimate_accuracy
+
+
+class DBPedia(Dataset):
+
+    def __init__(self, emb_file, lab_file, load_func=torch.load):
+        
+        super(Dataset, self).__init__()
+        self.embs = load_func(emb_file)
+        self.labs = load_func(lab_file)
+
+    def __len__(self):
+        return self.embs.shape[0]
+
+    def __getindex__(self, idx):
+        return self.embs[idx], self.labs[idx]
 
 
 class HierarchicalRNN(nn.Module):

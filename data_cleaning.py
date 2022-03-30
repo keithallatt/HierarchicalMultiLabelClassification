@@ -5,10 +5,14 @@ Load the data, extract the relevant information from the csv files to create a m
 
 Author(s): Keith Allatt,
 """
+import csv
 from typing import Union, Generator
 
 from pathlib import Path
-import csv
+
+import torch
+from transformers import BertTokenizer, BertModel
+
 
 # filepaths, cross-platform compatible,
 all_data = Path("./dbpedia_data/DBP_wiki_data.csv")
@@ -62,6 +66,26 @@ def csv_file_generator(infile: Union[str, Path]) -> Generator[tuple, None, None]
             #         lc.append(ll)
 
             yield doc, (l1, l2, l3)
+
+
+def parocess_documents(doc_gen, 
+                       emb_file="embeddings.pt", 
+                       lab_file="labels.pt"):
+
+    tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+    model = BertModel.from_pretrained("bert-base-uncased")
+
+    emb_list, lab_list = [], []
+    for i, (doc, labs) in enumerate(doc_gen):
+        
+        tok_in = tokenizer(doc, return_tensors="pt", padding=True)
+        emb = model(**tok_in).pooler_output
+        emb_list.append(emb)
+
+        lab_list.append(torch.tensor(labs))
+
+    torch.save(torch.tensor(emb_list), emb_file)
+    torch.save(torch.tensor(lab_list), lab_file)
 
 
 if __name__ == '__main__':

@@ -13,6 +13,7 @@ import os.path
 from pathlib import Path
 import pickle
 import time
+from datetime import datetime
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
@@ -172,7 +173,8 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
 
 # MODEL TRAINING FUNCTIONS @ KEITH.ALLATT
 def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, num_epochs=7,
-          calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0):
+          calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0,
+          device="cpu", checkpoint_path="checkpoints"):
     """
     Train a model.
     """
@@ -181,6 +183,10 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
     if hasattr(model, "train_lock"):
         if model.train_lock:
             print("Model is locked. Please unlock the model to train.")
+
+    start_time = datetime.now().strftime("%H%M%S")
+    if checkpoint_path is not None and not os.path.exists(checkpoint_path):
+        os.mkdir(checkpoint_path)
 
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
 
@@ -201,8 +207,13 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
         for epoch in range(num_epochs):
             for xs, ts in train_loader:
                 model.train()
-                ys = model(xs)
-                loss = criterion(ys, ts)
+
+                xs, ts = xs.to(device), ts.to(device)
+                preds = model(xs)
+                loss = torch.sum((criterion(pred, label) 
+                                  for pred, label in zip(preds, ts)))
+                xs.detach(), ts.detach()
+
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
@@ -221,6 +232,10 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
                     if all(x >= train_until for x in set(train_acc[-2:])) or n >= max_iterations:
                         done = True
                         break
+
+                    if checkpoint_path is not None:
+                        torch.save(model.state_dict(), 
+                                   checkpoint_path + f"model_{start_time}_{epoch}")
 
                 if not (n % 10):
                     t_elapsed = (time.time() - time_start)
@@ -277,7 +292,9 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
                                                      learning_rate=kwargs.get("learning_rate", 0.001),
                                                      num_epochs=kwargs.get("num_epochs", 7),
                                                      calc_acc_every=kwargs.get("calc_acc_every", 0),
-                                                     train_until=kwargs.get("train_until", 1.0))
+                                                     train_until=kwargs.get("train_until", 1.0),
+                                                     device=kwargs.get("device", "cpu"), 
+                                                     checkpoint_path=kwargs.get("checkpoint_path", "checkpoints"))
 
     show = kwargs.get("show_plts", False)
     ask = kwargs.get("ask", False)
