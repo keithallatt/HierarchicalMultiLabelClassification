@@ -16,6 +16,8 @@ import time
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
+import torch.optim as optim
+import matplotlib.pyplot as plt
 
 
 def make_progressbar(length: int, progress: float, naive: bool = False, time_start: float = None) -> str:
@@ -166,6 +168,156 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
         prev_size *= mult
     layers.append(nn.Linear(prev_size, output_size))
     return nn.Sequential(*layers)
+
+
+# MODEL TRAINING FUNCTIONS @ KEITH.ALLATT
+def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, num_epochs=7,
+          calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0):
+    """
+    Train a model.
+    """
+
+    # can add a train_lock attribute to a model to prevent the train function from making changes.
+    if hasattr(model, "train_lock"):
+        if model.train_lock:
+            print("Model is locked. Please unlock the model to train.")
+
+    train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
+
+    # TODO: be able to chooose loss / optimizer with keyword arguments
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+
+    its, its_sub, losses, train_acc, val_acc = [], [], [], [], []
+
+    n = 0
+    # for pickled models, if training_iterations is an attribute, then
+    if hasattr(model, "training_iterations"):
+        n = model.training_iterations
+    done = False
+    time_start = time.time()
+    loss = 0
+    try:
+        for epoch in range(num_epochs):
+            for xs, ts in train_loader:
+                model.train()
+                ys = model(xs)
+                loss = criterion(ys, ts)
+                loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+
+                its.append(n)
+                losses.append(float(loss)/batch_size)
+                n += 1
+
+                if calc_acc_every != 0 and n % calc_acc_every == 0:
+                    its_sub.append(n)
+                    ta = get_accuracy(model, train_data)
+                    va = get_accuracy(model, valid_data)
+                    train_acc.append(ta)
+                    val_acc.append(va)
+
+                    if all(x >= train_until for x in set(train_acc[-2:])) or n >= max_iterations:
+                        done = True
+                        break
+
+                if not (n % 10):
+                    t_elapsed = (time.time() - time_start)
+                    t_str = str(datetime.timedelta(seconds=int(t_elapsed)))
+                    t_str = t_str.rjust(10)
+                    ta = estimate_accuracy(model, train_data)
+                    va = estimate_accuracy(model, valid_data)
+                    t3s = 1-top_n_error_rate(model, valid_data, 3)
+
+                    n_repr = str(n).rjust(7)
+                    if n >= 1_000:
+                        sn = str(n)
+                        digs = len(sn) - 1
+                        n_repr = f"{sn[0]}.{sn[1:3]}e{str(digs).ljust(2)}"
+
+                    print(f"\rI {n_repr}: [TA:{make_progressbar(8, ta)}] "
+                          f"[VA:{make_progressbar(8, va)}] [T3S:{make_progressbar(8, t3s)}] {t_str}", end="")
+
+            if done:
+                break
+
+    except KeyboardInterrupt:
+        n = len(val_acc)
+        its = its[:n]
+        its_sub = its_sub[:n]
+        losses = losses[:n]
+        train_acc = train_acc[:n]
+
+    if not train_acc:
+        train_acc = [get_accuracy(model, train_data)]
+    if not losses:
+        losses = [float(loss) / batch_size]
+    if not val_acc:
+        val_acc = [get_accuracy(model, valid_data)]
+    if not its_sub:
+        its_sub = [n]
+
+    print()
+
+    if hasattr(model, "training_iterations"):
+        model.training_iterations = n
+
+    return its, its_sub, losses, train_acc, val_acc
+
+
+def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x, **kwargs):
+    # can specify data_loader, by default, the identify function x -> x. Acts like a preprocessor.
+    training_dataset = data_loader(train_data)
+    validation_dataset = data_loader(valid_data)
+    testing_dataset = data_loader(test_data)
+
+    its, its_sub, losses, train_acc, val_acc = train(model, training_dataset, validation_dataset,
+                                                     batch_size=kwargs.get("batch_size", 64),
+                                                     learning_rate=kwargs.get("learning_rate", 0.001),
+                                                     num_epochs=kwargs.get("num_epochs", 7),
+                                                     calc_acc_every=kwargs.get("calc_acc_every", 0),
+                                                     train_until=kwargs.get("train_until", 1.0))
+
+    show = kwargs.get("show_plts", False)
+    ask = kwargs.get("ask", False)
+
+    if show:
+        if len(its) > 1:
+            try:
+                plt.title("Loss Curve")
+                plt.plot(its, losses, label="Train")
+                plt.xlabel("Iterations")
+                plt.ylabel("Loss")
+                plt.show()
+            except ValueError:
+                print("Loss curve unavailable")
+                print(len(its), len(losses))
+
+        if len(its_sub) > 1:
+            try:
+                plt.title("Learning Curve")
+                plt.plot(its_sub, train_acc, label="Train")
+                plt.plot(its_sub, val_acc, label="Validation")
+                plt.xlabel("Iterations")
+                plt.ylabel("Training Accuracy")
+                plt.legend(loc='best')
+                plt.show()
+            except ValueError:
+                print("Learning curve unavailable")
+                print(len(its_sub), len(train_acc), len(val_acc))
+
+    if train_acc:
+        print("Final Training Accuracy: {}".format(train_acc[-1]))
+    if val_acc:
+        print("Final Validation Accuracy: {}".format(val_acc[-1]))
+    if test_data is not None:
+        print("-" * 30)
+        str_repr_test_acc = get_accuracy(model, testing_dataset, str_repr=True)
+        print("Final Test Accuracy: {}".format(str_repr_test_acc))
+
+    if ask and input("Save to file? [y/n] > ").lower().strip() == "y":
+        dump_data(kwargs.get("outfile", "model.pickle"), model)
 
 
 if __name__ == "__main__":
