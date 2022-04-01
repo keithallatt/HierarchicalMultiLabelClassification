@@ -13,7 +13,7 @@ import os.path
 from pathlib import Path
 import pickle
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
@@ -78,19 +78,29 @@ def load_data(infile: str) -> object:
         return pickle.load(file)
 
 
-def to_one_hot(z: Union[int, list], d: int) -> np.ndarray:
+# def to_one_hot(z: Union[int, list], d: int) -> np.ndarray:
+#     """
+#     Convert z('s) into one hot vectors of size d.
+#  
+#     :param z: The list of indices.
+#     :param d: The dimensionality.
+#     :returns A NumPy array of one hot vectors.
+#     """
+#     if isinstance(z, int):
+#         z = [z]
+#     identity = np.eye(d, dtype=np.float32)
+#     assert set(z).issubset(set(range(d))), "Invalid data for one hot vector"
+#     return np.array(list(map(identity.__getitem__, z)))
+
+def to_one_hot(z: torch.tensor, d: int) -> torch.tensor:
     """
     Convert z('s) into one hot vectors of size d.
-
+ 
     :param z: The list of indices.
     :param d: The dimensionality.
     :returns A NumPy array of one hot vectors.
     """
-    if isinstance(z, int):
-        z = [z]
-    identity = np.eye(d, dtype=np.float32)
-    assert set(z).issubset(set(range(d))), "Invalid data for one hot vector"
-    return np.array(list(map(identity.__getitem__, z)))
+    return torch.eye(d)[z]
 
 
 def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_total: int = None) -> Union[str, float]:
@@ -110,11 +120,14 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     total = 0
 
     for xs, ts in dataloader:
+
         output = model(xs)
-        pred = output.max(1, keepdim=True)[1]
-        correct += pred.eq(ts.view_as(pred)).sum().item()
-        total += xs.shape[0]
-        if max_total is not None and total > max_total:
+        for i in range(len(model.output_sizes)):
+            pred = output[i].max(1, keepdim=True)[1]
+            correct += pred.eq(ts[:,i].view_as(pred)).sum().item()
+            total += xs.shape[0]
+
+        if max_total is not None and total > max_total*len(model.output_sizes):
             break
 
     return f"{correct} / {total} ({correct/total:.4f})" if str_repr else (correct / total)
@@ -200,18 +213,25 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
     # for pickled models, if training_iterations is an attribute, then
     if hasattr(model, "training_iterations"):
         n = model.training_iterations
+
     done = False
     time_start = time.time()
     loss = 0
     try:
+
         for epoch in range(num_epochs):
+
             for xs, ts in train_loader:
+
                 model.train()
 
                 xs, ts = xs.to(device), ts.to(device)
                 preds = model(xs)
-                loss = torch.sum((criterion(pred, label) 
-                                  for pred, label in zip(preds, ts)))
+                                  
+                loss = 0 
+                for i, d in enumerate(model.output_sizes):
+                    loss += criterion(preds[i], to_one_hot(ts[:,i], d)) 
+
                 xs.detach(), ts.detach()
 
                 loss.backward()
@@ -239,7 +259,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
 
                 if not (n % 10):
                     t_elapsed = (time.time() - time_start)
-                    t_str = str(datetime.timedelta(seconds=int(t_elapsed)))
+                    t_str = str(timedelta(seconds=int(t_elapsed)))
                     t_str = t_str.rjust(10)
                     ta = estimate_accuracy(model, train_data)
                     va = estimate_accuracy(model, valid_data)

@@ -25,7 +25,7 @@ class DBPedia(Dataset):
     def __len__(self):
         return self.embs.shape[0]
 
-    def __getindex__(self, idx):
+    def __getitem__(self, idx):
         return self.embs[idx], self.labs[idx]
 
 
@@ -36,6 +36,8 @@ class HierarchicalRNN(nn.Module):
                  rnn_size_mult: int = 1, rnn_n_hidden: int = 1):
 
         super(HierarchicalRNN, self).__init__()
+
+        self.output_sizes = output_sizes
 
         self.embedding_fcs = nn.ModuleList()
         for fc_in_size in (input_size,) + output_sizes[:-1]:

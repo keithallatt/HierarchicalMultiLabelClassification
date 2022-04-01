@@ -3,12 +3,16 @@ data_cleaning.py
 
 Load the data, extract the relevant information from the csv files to create a more easily parsable file.
 
-Author(s): Keith Allatt,
+Author(s): Keith Allatt, Renato Zimmermann
 """
 import csv
+import pickle
+
 from typing import Union, Generator
+from string import punctuation
 
 from pathlib import Path
+from tqdm import tqdm
 
 import torch
 from transformers import BertTokenizer, BertModel
@@ -19,6 +23,33 @@ all_data = Path("./dbpedia_data/DBP_wiki_data.csv")
 training_data = Path("./dbpedia_data/DBPEDIA_train.csv")
 validation_data = Path("./dbpedia_data/DBPEDIA_val.csv")
 testing_data = Path("./dbpedia_data/DBPEDIA_test.csv")
+
+
+class WordIdMapping:
+
+    def __init__(self, n_levels):
+
+        self.n_levels = n_levels
+        self.word_to_id = [dict() for _ in range(n_levels)]
+        self.id_to_word = [list() for _ in range(n_levels)]
+
+    def add_word(self, level, word):
+        if word not in self.word_to_id[level]:
+            self.word_to_id[level][word] = len(self.id_to_word[level])
+            self.id_to_word[level].append(word)
+
+    def add_set(self, words):
+        assert len(words) == self.n_levels
+        for i, word in enumerate(words):
+            self.add_word(i, word)
+
+    def get_word_set(self, words):
+        return tuple([self.word_to_id[i][word]
+                      for i, word in enumerate(words)])
+
+    def add_and_get(self, words):
+        self.add_set(words)
+        return self.get_word_set(words)
 
 
 def csv_file_generator(infile: Union[str, Path]) -> Generator[tuple, None, None]:
@@ -68,27 +99,62 @@ def csv_file_generator(infile: Union[str, Path]) -> Generator[tuple, None, None]
             yield doc, (l1, l2, l3)
 
 
-def parocess_documents(doc_gen, 
-                       emb_file="embeddings.pt", 
-                       lab_file="labels.pt"):
+def gen_from_data(infile: Union[str, Path]) -> Generator[tuple, None, None]:
+    """Get contents of train, val or test data"""
 
+    with open(infile, mode='r') as file:
+        # reads file in, line by line.
+        csv_file = iter(file)
+        next(csv_file) # skip header
+        for line in csv_file:
+            line = line.split(',')
+            # get l1, l2, and l3 category
+            l3 = line[-1].strip()
+            l2 = line[-2].strip()
+            l1 = line[-3].strip()
+            doc = ','.join(line[:-3]).strip()
+
+            yield doc, (l1, l2, l3)
+
+
+def process_documents(data_files,
+                      emb_suffix="_embeddings.pt",
+                      lab_suffix="_labels.pt",
+                      map_file="mapping.pkl"):
+
+    rm_punct = str.maketrans('', '', punctuation)
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
     model = BertModel.from_pretrained("bert-base-uncased")
 
-    emb_list, lab_list = [], []
-    for i, (doc, labs) in enumerate(doc_gen):
-        
-        tok_in = tokenizer(doc, return_tensors="pt", padding=True)
-        emb = model(**tok_in).pooler_output
-        emb_list.append(emb)
+    map_data = WordIdMapping(3)
 
-        lab_list.append(torch.tensor(labs))
+    for file_name in data_files:
 
-    torch.save(torch.tensor(emb_list), emb_file)
-    torch.save(torch.tensor(lab_list), lab_file)
+        print(f"PROCESSING: {file_name}")
 
+        file_name = Path(file_name)
+        doc_gen = gen_from_data(file_name)
+        emb_list, lab_list = [], []
+
+        for doc, labs in tqdm(doc_gen):
+
+            doc = doc.translate(rm_punct)[:510]
+            tok_in = tokenizer(doc, return_tensors="pt", padding=True)
+            emb = model(**tok_in).pooler_output.squeeze().detach()
+
+            lab_ids = map_data.add_and_get(labs)
+
+            emb_list.append(emb.squeeze())
+            lab_list.append(torch.tensor(lab_ids))
+
+        torch.save(torch.stack(emb_list), file_name.stem+emb_suffix)
+        torch.save(torch.stack(lab_list), file_name.stem+lab_suffix)
+
+    with open(map_file, "wb") as f:
+        pickle.dump(map_data, f)
 
 if __name__ == '__main__':
-    g = csv_file_generator(all_data)
-    for d, ls in g:
-        print(d[:min(len(d), 100)], ls)
+    process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
+                       for name in ["train", "val", "test"]])
+    # for d, ls in g:
+    #     print(d[:min(len(d), 100)], ls)
