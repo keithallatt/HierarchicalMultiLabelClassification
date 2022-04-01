@@ -1,5 +1,6 @@
 */venv
+*.swp
 *.idea
-*/__pycache__
-/dbpedia_data/*
-/processed_data/*
+**/__pycache__
+dbpedia_data/*
+processed_data/*
