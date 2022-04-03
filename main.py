@@ -3,8 +3,6 @@ main.py
 
 :)
 """
-from pathlib import Path
-
 from utilities import train_model
 from model import DBPedia, HierarchicalRNN
 
@@ -12,18 +10,25 @@ from model import DBPedia, HierarchicalRNN
 if __name__ == "__main__":
 
     file_fmt = "processed_data/DBPEDIA_{split}_{var}.pt"
+    obs = 2000 # set this to some lower number when testing
+
     train = DBPedia(file_fmt.format(split="train", var="embeddings"),
-                    file_fmt.format(split="train", var="labels"))
+                    file_fmt.format(split="train", var="labels"),
+                    obs=obs)
     val = DBPedia(file_fmt.format(split="val", var="embeddings"),
-                    file_fmt.format(split="val", var="labels"))
+                    file_fmt.format(split="val", var="labels"),
+                    obs=obs)
     test = DBPedia(file_fmt.format(split="test", var="embeddings"),
-                    file_fmt.format(split="test", var="labels"))
+                    file_fmt.format(split="test", var="labels"),
+                    obs=obs)
 
     model = HierarchicalRNN(
         input_size=768, emb_size=100, output_sizes=(9, 70, 219)
     )
 
-    config = {
+    train_opts = {
+        "calc_acc_every": 5,
     }
 
-    train_model(model, train, val, test, **config)
+    train_model(model, train, val, test, show_plts=True,
+                train_opts=train_opts)

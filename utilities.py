@@ -11,6 +11,9 @@ from typing import Union
 import numpy as np
 import os.path
 from pathlib import Path
+
+from tqdm import tqdm
+
 import pickle
 import time
 from datetime import datetime, timedelta
@@ -45,7 +48,7 @@ def make_progressbar(length: int, progress: float, naive: bool = False, time_sta
     num_full, fraction = divmod(l2, 1)
 
     bar_ord = ord(bar)
-    bar *= num_full
+    bar *= int(num_full)
     eighths = round(fraction * 8)
     chars = " " + ''.join([chr(bar_ord + i) for i in range(8)][::-1])
     return (bar + chars[eighths]).ljust(length)[:length] + f"{chars[1]}{progress * 100:.2f}% {t_str}"
@@ -81,7 +84,7 @@ def load_data(infile: str) -> object:
 # def to_one_hot(z: Union[int, list], d: int) -> np.ndarray:
 #     """
 #     Convert z('s) into one hot vectors of size d.
-#  
+#
 #     :param z: The list of indices.
 #     :param d: The dimensionality.
 #     :returns A NumPy array of one hot vectors.
@@ -95,7 +98,7 @@ def load_data(infile: str) -> object:
 def to_one_hot(z: torch.tensor, d: int) -> torch.tensor:
     """
     Convert z('s) into one hot vectors of size d.
- 
+
     :param z: The list of indices.
     :param d: The dimensionality.
     :returns A NumPy array of one hot vectors.
@@ -179,15 +182,16 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
     prev_size = input_size
     for mult in layer_multiples:
         layers.append(nn.Linear(prev_size, prev_size*mult))
+        layers.append(nn.ReLU())
         prev_size *= mult
     layers.append(nn.Linear(prev_size, output_size))
     return nn.Sequential(*layers)
 
 
-# MODEL TRAINING FUNCTIONS @ KEITH.ALLATT
-def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, num_epochs=7,
+# MODEL TRAINING FUNCTIONS @ KEITH.ALLATT, RENATO.ZIMMERMANN
+def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num_epochs=7,
           calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0,
-          device="cpu", checkpoint_path="checkpoints"):
+          device="cpu", checkpoint_path=None):
     """
     Train a model.
     """
@@ -197,10 +201,11 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
         if model.train_lock:
             print("Model is locked. Please unlock the model to train.")
 
-    start_time = datetime.now().strftime("%H%M%S")
+    check_prefix = datetime.now().strftime("%H%M%S")
     if checkpoint_path is not None and not os.path.exists(checkpoint_path):
         os.mkdir(checkpoint_path)
 
+    tot_train = len(train_data)
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
 
     # TODO: be able to chooose loss / optimizer with keyword arguments
@@ -209,28 +214,29 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
 
     its, its_sub, losses, train_acc, val_acc = [], [], [], [], []
 
-    n = 0
+    n_batch = 0
     # for pickled models, if training_iterations is an attribute, then
     if hasattr(model, "training_iterations"):
-        n = model.training_iterations
+        n_batch = model.training_iterations
 
     done = False
-    time_start = time.time()
+    start_time = time.time()
     loss = 0
     try:
 
         for epoch in range(num_epochs):
 
+            n_train = 0
             for xs, ts in train_loader:
 
                 model.train()
 
                 xs, ts = xs.to(device), ts.to(device)
                 preds = model(xs)
-                                  
-                loss = 0 
+
+                loss = 0
                 for i, d in enumerate(model.output_sizes):
-                    loss += criterion(preds[i], to_one_hot(ts[:,i], d)) 
+                    loss += criterion(preds[i], to_one_hot(ts[:,i], d))
 
                 xs.detach(), ts.detach()
 
@@ -238,44 +244,36 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
                 optimizer.step()
                 optimizer.zero_grad()
 
-                its.append(n)
+                its.append(n_batch)
                 losses.append(float(loss)/batch_size)
-                n += 1
 
-                if calc_acc_every != 0 and n % calc_acc_every == 0:
-                    its_sub.append(n)
+                n_batch += 1
+                n_train += xs.shape[0]
+
+                if calc_acc_every != 0 and n_batch % calc_acc_every == 0:
+                    its_sub.append(n_batch)
                     ta = get_accuracy(model, train_data)
                     va = get_accuracy(model, valid_data)
                     train_acc.append(ta)
                     val_acc.append(va)
 
-                    if all(x >= train_until for x in set(train_acc[-2:])) or n >= max_iterations:
+                    if all(x >= train_until for x in set(train_acc[-2:])) or n_batch >= max_iterations:
                         done = True
                         break
 
-                    if checkpoint_path is not None:
-                        torch.save(model.state_dict(), 
-                                   checkpoint_path + f"model_{start_time}_{epoch}")
-
-                if not (n % 10):
-                    t_elapsed = (time.time() - time_start)
-                    t_str = str(timedelta(seconds=int(t_elapsed)))
-                    t_str = t_str.rjust(10)
-                    ta = estimate_accuracy(model, train_data)
-                    va = estimate_accuracy(model, valid_data)
-                    t3s = 1-top_n_error_rate(model, valid_data, 3)
-
-                    n_repr = str(n).rjust(7)
-                    if n >= 1_000:
-                        sn = str(n)
-                        digs = len(sn) - 1
-                        n_repr = f"{sn[0]}.{sn[1:3]}e{str(digs).ljust(2)}"
-
-                    print(f"\rI {n_repr}: [TA:{make_progressbar(8, ta)}] "
-                          f"[VA:{make_progressbar(8, va)}] [T3S:{make_progressbar(8, t3s)}] {t_str}", end="")
+                if not (n_batch % 10):
+                    it_progress = tqdm.format_meter(n_train, tot_train, time.time()-start_time,
+                                                    prefix=f"E:[{epoch+1}/{num_epochs}] I")
+                    ta_progress = make_progressbar(8, estimate_accuracy(model, train_data))
+                    va_progress = make_progressbar(8, estimate_accuracy(model, valid_data))
+                    print(f"\r{it_progress} [TA:{ta_progress}] [VA:{va_progress}] ", end='')
 
             if done:
                 break
+
+        if checkpoint_path is not None:
+            torch.save(model.state_dict(),
+                        checkpoint_path + f"model_{check_prefix}_{epoch}")
 
     except KeyboardInterrupt:
         n = len(val_acc)
@@ -291,58 +289,61 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
     if not val_acc:
         val_acc = [get_accuracy(model, valid_data)]
     if not its_sub:
-        its_sub = [n]
+        its_sub = [n_batch]
 
     print()
 
     if hasattr(model, "training_iterations"):
-        model.training_iterations = n
+        model.training_iterations = n_batch
 
     return its, its_sub, losses, train_acc, val_acc
 
 
-def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x, **kwargs):
+def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x,
+                outfile="model.pickle", train_opts=None, **kwargs):
+
     # can specify data_loader, by default, the identify function x -> x. Acts like a preprocessor.
     training_dataset = data_loader(train_data)
     validation_dataset = data_loader(valid_data)
     testing_dataset = data_loader(test_data)
 
+    if train_opts is None:
+        train_opts = dict()
     its, its_sub, losses, train_acc, val_acc = train(model, training_dataset, validation_dataset,
-                                                     batch_size=kwargs.get("batch_size", 64),
-                                                     learning_rate=kwargs.get("learning_rate", 0.001),
-                                                     num_epochs=kwargs.get("num_epochs", 7),
-                                                     calc_acc_every=kwargs.get("calc_acc_every", 0),
-                                                     train_until=kwargs.get("train_until", 1.0),
-                                                     device=kwargs.get("device", "cpu"), 
-                                                     checkpoint_path=kwargs.get("checkpoint_path", "checkpoints"))
+                                                     **train_opts)
 
     show = kwargs.get("show_plts", False)
     ask = kwargs.get("ask", False)
 
+    loss_fig, train_fig = None, None
     if show:
         if len(its) > 1:
             try:
-                plt.title("Loss Curve")
-                plt.plot(its, losses, label="Train")
-                plt.xlabel("Iterations")
-                plt.ylabel("Loss")
-                plt.show()
+                loss_fig, ax = plt.subplots()
+                ax.set_title("Loss Curve")
+                ax.plot(its, losses, label="Train")
+                ax.set_xlabel("Iterations")
+                ax.set_ylabel("Loss")
+                loss_fig.show()
             except ValueError:
                 print("Loss curve unavailable")
                 print(len(its), len(losses))
 
         if len(its_sub) > 1:
             try:
-                plt.title("Learning Curve")
-                plt.plot(its_sub, train_acc, label="Train")
-                plt.plot(its_sub, val_acc, label="Validation")
-                plt.xlabel("Iterations")
-                plt.ylabel("Training Accuracy")
-                plt.legend(loc='best')
-                plt.show()
+                train_fig, ax = plt.subplots()
+                ax.set_title("Learning Curve")
+                ax.plot(its_sub, train_acc, label="Train")
+                ax.plot(its_sub, val_acc, label="Validation")
+                ax.set_xlabel("Iterations")
+                ax.set_ylabel("Training Accuracy")
+                ax.legend(loc='best')
+                train_fig.show()
             except ValueError:
                 print("Learning curve unavailable")
                 print(len(its_sub), len(train_acc), len(val_acc))
+
+        input("Showing plots. Type anything to continue.")
 
     if train_acc:
         print("Final Training Accuracy: {}".format(train_acc[-1]))
@@ -354,7 +355,11 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
         print("Final Test Accuracy: {}".format(str_repr_test_acc))
 
     if ask and input("Save to file? [y/n] > ").lower().strip() == "y":
-        dump_data(kwargs.get("outfile", "model.pickle"), model)
+        dump_data(outfile, model)
+        if loss_fig is not None:
+            loss_fig.savefig(kwargs.get("loss_fig_out", "loss_curve.png"))
+        if train_fig is not None:
+            train_fig.savefig(kwargs.get("train_fig_out", "train_curve.png"))
 
 
 if __name__ == "__main__":

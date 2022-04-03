@@ -16,11 +16,11 @@ from utilities import make_layer_mult_mlp, estimate_accuracy
 
 class DBPedia(Dataset):
 
-    def __init__(self, emb_file, lab_file, load_func=torch.load):
+    def __init__(self, emb_file, lab_file, load_func=torch.load, obs=None):
         
         super(Dataset, self).__init__()
-        self.embs = load_func(emb_file)
-        self.labs = load_func(lab_file)
+        self.embs = load_func(emb_file)[:obs]
+        self.labs = load_func(lab_file)[:obs]
 
     def __len__(self):
         return self.embs.shape[0]
