@@ -42,7 +42,7 @@ def make_progressbar(length: int, progress: float, naive: bool = False, time_sta
     if naive:
         return (bar * round(progress * length)).ljust(length)[:length] + t_str
 
-    num_full, fraction = divmod(l2, 1)
+    num_full, fraction = int(l2), l2 % 1
 
     bar_ord = ord(bar)
     bar *= num_full
@@ -143,35 +143,6 @@ def estimate_accuracy(model: nn.Module, data: Dataset) -> float:
     return get_accuracy(model, data, max_total=2000)
 
 
-def top_n_error_rate(model: nn.Module, data: Dataset, n: int) -> float:
-    """
-    Rate at which correct label is not in the top n predictions.
-
-    :param model: The model to evaluate
-    :param data: The test data set
-    :param n: number of top predictions to verify label is in
-    :return: the top n error rate
-    """
-    not_in_top_n = 0
-    total = 0
-
-    model.eval()  # annotation for evaluation; sets dropout and batch norm (not necessary yet)
-
-    dl = DataLoader(data, batch_size=128)
-
-    for xs, ts in dl:
-        predictions = model(xs)
-        top_n = torch.topk(predictions, k=n, dim=1)
-        top_n_i = top_n.indices
-        ts_r = np.repeat(ts.reshape((ts.shape[0], 1)), n, axis=1)
-
-        not_in_top_n += (ts_r != top_n_i).all(axis=1).sum().item()
-        total += xs.shape[0]
-
-    # safe divide by zero
-    return 0. if total == 0 else not_in_top_n / total
-
-
 def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tuple) -> nn.Sequential:
     """Make MLP with each layer defined as a multiple of the previous.
     """
@@ -227,7 +198,8 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
 
                 xs, ts = xs.to(device), ts.to(device)
                 preds = model(xs)
-                                  
+
+                # loss here...
                 loss = 0 
                 for i, d in enumerate(model.output_sizes):
                     loss += criterion(preds[i], to_one_hot(ts[:,i], d)) 
@@ -263,7 +235,6 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
                     t_str = t_str.rjust(10)
                     ta = estimate_accuracy(model, train_data)
                     va = estimate_accuracy(model, valid_data)
-                    t3s = 1-top_n_error_rate(model, valid_data, 3)
 
                     n_repr = str(n).rjust(7)
                     if n >= 1_000:
@@ -272,7 +243,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.0005, nu
                         n_repr = f"{sn[0]}.{sn[1:3]}e{str(digs).ljust(2)}"
 
                     print(f"\rI {n_repr}: [TA:{make_progressbar(8, ta)}] "
-                          f"[VA:{make_progressbar(8, va)}] [T3S:{make_progressbar(8, t3s)}] {t_str}", end="")
+                          f"[VA:{make_progressbar(8, va)}] {t_str}", end="")
 
             if done:
                 break
