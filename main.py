@@ -3,7 +3,9 @@ main.py
 
 :)
 """
-from utilities import train_model
+import torch
+
+from utilities import train_model, get_param_sizes
 from model import DBPedia, HierarchicalRNN
 
 
@@ -11,6 +13,7 @@ if __name__ == "__main__":
 
     file_fmt = "processed_data/DBPEDIA_{split}_{var}.pt"
     obs = 2000 # set this to some lower number when testing
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     train = DBPedia(file_fmt.format(split="train", var="embeddings"),
                     file_fmt.format(split="train", var="labels"),
@@ -24,11 +27,14 @@ if __name__ == "__main__":
 
     model = HierarchicalRNN(
         input_size=768, emb_size=100, output_sizes=(9, 70, 219)
-    )
+    ).to(device)
 
     train_opts = {
         "calc_acc_every": 5,
+        "device": device,
     }
+
+    param_sizes = get_param_sizes(model)
 
     train_model(model, train, val, test, show_plts=True,
                 train_opts=train_opts)

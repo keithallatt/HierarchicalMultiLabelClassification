@@ -334,5 +334,20 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
             train_fig.savefig(kwargs.get("train_fig_out", "train_curve.png"))
 
 
+def _tot_params_helper(model):
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+
+def get_param_sizes(model):
+
+    ret = dict()
+    ret["RNN"] = _tot_params_helper(model.rnn)
+    for i in range(len(model.embedding_fcs)):
+        ret[f"emb_fc_{i+1}"] = _tot_params_helper(model.embedding_fcs[i])
+        ret[f"clf_fc_{i+1}"] = _tot_params_helper(model.classifier_fcs[i])
+    ret["total"] = sum(n_params for n_params in ret.values())
+    return ret
+
+
 if __name__ == "__main__":
     pass
