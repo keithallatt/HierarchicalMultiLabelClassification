@@ -17,7 +17,7 @@ from utilities import make_layer_mult_mlp, estimate_accuracy
 class DBPedia(Dataset):
 
     def __init__(self, emb_file, lab_file, load_func=torch.load, obs=None):
-        
+
         super(Dataset, self).__init__()
         self.embs = load_func(emb_file)[:obs]
         self.labs = load_func(lab_file)[:obs]
@@ -46,7 +46,7 @@ class HierarchicalRNN(nn.Module):
             )
 
         self.rnn_hidden_size = emb_size*rnn_size_mult
-        self.rnn = nn.RNN(emb_size,
+        self.rnn = nn.GRU(emb_size,
                           self.rnn_hidden_size,
                           rnn_n_hidden)
 
@@ -76,16 +76,16 @@ class HierarchicalRNN(nn.Module):
             last_hidden = hid
 
         return preds
-        
 
-def train(model, train_data, valid_data, batch_size=32, num_epochs=7,  
+
+def train(model, train_data, valid_data, batch_size=32, num_epochs=7,
           weight_decay=0.0, learning_rate=0.01, momentum=0,
           device="cpu", checkpoint_path="checkpoints"):
 
     train_loader = DataLoader(
         train_data, batch_size=batch_size, shuffle=True
     )
-    
+
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(model.parameters(),
                           lr=learning_rate,
@@ -109,14 +109,14 @@ def train(model, train_data, valid_data, batch_size=32, num_epochs=7,
 
     it = 0
     for epoch in range(num_epochs):
-    
+
         for doc_embs, labels in train_loader:
 
             it += len(labels)
 
             doc_embs, labels = doc_embs.to(device), labels.to(device)
             preds = model(doc_embs)
-            loss = torch.sum((criterion(pred, label) 
+            loss = torch.sum((criterion(pred, label)
                               for pred, label in zip(preds, labels)))
             doc_embs.detach(), labels.detach()
 
@@ -135,11 +135,11 @@ def train(model, train_data, valid_data, batch_size=32, num_epochs=7,
               f"Val Acc: {valid_acc}")
 
         acc_log["epoch"].append(epoch)
-        acc_log["train_acc"].append(train_acc)        
+        acc_log["train_acc"].append(train_acc)
         acc_log["valid_acc"].append(valid_acc)
 
         if checkpoint_path is not None:
-            torch.save(model.state_dict(), 
+            torch.save(model.state_dict(),
                        checkpoint_path + f"model_{start_time}_{epoch}")
 
     _, axs = plt.subplots(nrows=2, ncols=1, figsize=(10,10))
@@ -148,7 +148,7 @@ def train(model, train_data, valid_data, batch_size=32, num_epochs=7,
     axs[0].set_xlabel("Iteration")
     axs[0].set_ylabel("Loss")
 
-    axs[1].plot("epoch", "train_acc", data=acc_log, 
+    axs[1].plot("epoch", "train_acc", data=acc_log,
                 label="Train Accuracy")
     axs[1].plot("epoch", "valid_acc", data=acc_log,
                 label="Validation Accuracy")
@@ -189,5 +189,5 @@ if __name__ == "__main__":
         sent = tokenizer(raw_sents, return_tensors='pt', padding=True)
         sent_emb = emb_model(**sent).pooler_output
         preds = pred_model(sent_emb)
-    
+
     print("DONE")
