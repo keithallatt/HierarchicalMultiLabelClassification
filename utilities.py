@@ -95,7 +95,7 @@ def load_data(infile: str) -> object:
 #     assert set(z).issubset(set(range(d))), "Invalid data for one hot vector"
 #     return np.array(list(map(identity.__getitem__, z)))
 
-def to_one_hot(z: torch.tensor, d: int) -> torch.tensor:
+def to_one_hot(z: torch.tensor, d: int, device="cpu") -> torch.tensor:
     """
     Convert z('s) into one hot vectors of size d.
 
@@ -103,10 +103,10 @@ def to_one_hot(z: torch.tensor, d: int) -> torch.tensor:
     :param d: The dimensionality.
     :returns A NumPy array of one hot vectors.
     """
-    return torch.eye(d)[z]
+    return torch.eye(d)[z].to(device)
 
 
-def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_total: int = None) -> Union[str, float]:
+def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_total: int = None, device="cpu") -> Union[str, float]:
     """
     Calculate accuracy for a given model and dataset.
 
@@ -124,11 +124,15 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
 
     for xs, ts in dataloader:
 
+        xs, ts = xs.to(device), ts.to(device)
+
         output = model(xs)
         for i in range(len(model.output_sizes)):
             pred = output[i].max(1, keepdim=True)[1]
             correct += pred.eq(ts[:,i].view_as(pred)).sum().item()
             total += xs.shape[0]
+
+        xs.detach(), ts.detach()
 
         if max_total is not None and total > max_total*len(model.output_sizes):
             break
@@ -136,14 +140,14 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     return f"{correct} / {total} ({correct/total:.4f})" if str_repr else (correct / total)
 
 
-def estimate_accuracy(model: nn.Module, data: Dataset) -> float:
+def estimate_accuracy(model: nn.Module, data: Dataset, device="cpu") -> float:
     """
     Estimate accuracy using 2000 data points.
 
     :param model: The PyTorch Model being evaluated.
     :param data: The data set to be evaluated by the model.
     """
-    return get_accuracy(model, data, max_total=2000)
+    return get_accuracy(model, data, max_total=2000, device=device)
 
 
 def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tuple) -> nn.Sequential:
@@ -208,7 +212,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                 # loss here...
                 loss = 0
                 for i, d in enumerate(model.output_sizes):
-                    loss += criterion(preds[i], to_one_hot(ts[:,i], d))
+                    loss += criterion(preds[i], to_one_hot(ts[:,i], d, device=device))
 
                 xs.detach(), ts.detach()
 
@@ -224,8 +228,8 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
                 if calc_acc_every != 0 and n_batch % calc_acc_every == 0:
                     its_sub.append(n_batch)
-                    ta = get_accuracy(model, train_data)
-                    va = get_accuracy(model, valid_data)
+                    ta = get_accuracy(model, train_data, device=device)
+                    va = get_accuracy(model, valid_data, device=device)
                     train_acc.append(ta)
                     val_acc.append(va)
 
@@ -236,8 +240,8 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                 if not (n_batch % 10):
                     it_progress = tqdm.format_meter(n_train, tot_train, time.time()-start_time,
                                                     prefix=f"E:[{epoch+1}/{num_epochs}] I")
-                    ta_progress = make_progressbar(8, estimate_accuracy(model, train_data))
-                    va_progress = make_progressbar(8, estimate_accuracy(model, valid_data))
+                    ta_progress = make_progressbar(8, estimate_accuracy(model, train_data, device=device))
+                    va_progress = make_progressbar(8, estimate_accuracy(model, valid_data, device=device))
                     print(f"\r{it_progress} [TA:{ta_progress}] [VA:{va_progress}] ", end='')
 
             if done:
@@ -259,7 +263,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
     if not losses:
         losses = [float(loss) / batch_size]
     if not val_acc:
-        val_acc = [get_accuracy(model, valid_data)]
+        val_acc = [get_accuracy(model, valid_data, device=device)]
     if not its_sub:
         its_sub = [n_batch]
 
@@ -272,7 +276,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
 
 def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x,
-                outfile="model.pickle", train_opts=None, **kwargs):
+                outfile="model.pickle", train_opts=None, device="cpu", **kwargs):
 
     # can specify data_loader, by default, the identify function x -> x. Acts like a preprocessor.
     training_dataset = data_loader(train_data)
@@ -282,7 +286,7 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
     if train_opts is None:
         train_opts = dict()
     its, its_sub, losses, train_acc, val_acc = train(model, training_dataset, validation_dataset,
-                                                     **train_opts)
+                                                     device=device, **train_opts)
 
     show = kwargs.get("show_plts", False)
     ask = kwargs.get("ask", False)
@@ -323,7 +327,7 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
         print("Final Validation Accuracy: {}".format(val_acc[-1]))
     if test_data is not None:
         print("-" * 30)
-        str_repr_test_acc = get_accuracy(model, testing_dataset, str_repr=True)
+        str_repr_test_acc = get_accuracy(model, testing_dataset, str_repr=True, device=device)
         print("Final Test Accuracy: {}".format(str_repr_test_acc))
 
     if ask and input("Save to file? [y/n] > ").lower().strip() == "y":
