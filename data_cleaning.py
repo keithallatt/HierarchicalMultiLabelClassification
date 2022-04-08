@@ -26,9 +26,7 @@ testing_data = Path("./dbpedia_data/DBPEDIA_test.csv")
 
 
 class WordIdMapping:
-
     def __init__(self, n_levels):
-
         self.n_levels = n_levels
         self.word_to_id = [dict() for _ in range(n_levels)]
         self.id_to_word = [list() for _ in range(n_levels)]
@@ -129,7 +127,6 @@ def process_documents(data_files,
     map_data = WordIdMapping(3)
 
     for file_name in data_files:
-
         print(f"PROCESSING: {file_name}")
 
         file_name = Path(file_name)
@@ -137,7 +134,6 @@ def process_documents(data_files,
         emb_list, lab_list = [], []
 
         for doc, labs in tqdm(doc_gen):
-
             doc = doc.translate(rm_punct)[:510]
             tok_in = tokenizer(doc, return_tensors="pt", padding=True)
             emb = model(**tok_in).pooler_output.squeeze().detach()
@@ -153,8 +149,43 @@ def process_documents(data_files,
     with open(map_file, "wb") as f:
         pickle.dump(map_data, f)
 
+
+def csv_pt_pairs(dataset, assert_tests=False):
+    processed_embeddings = torch.load(f"./processed_data/DBPEDIA_{dataset}_embeddings.pt")
+    processed_labels = torch.load(f"./processed_data/DBPEDIA_{dataset}_labels.pt")
+    doc_gen = gen_from_data(f"./dbpedia_data/DBPEDIA_{dataset}.csv")
+
+    if assert_tests:
+        rm_punct = str.maketrans('', '', punctuation)
+        tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
+        model = BertModel.from_pretrained("bert-base-uncased")
+
+        i = 0
+        for doc, labels in tqdm(doc_gen):
+                # do an integrity check on all the documents and labels.
+                doc = doc.translate(rm_punct)[:510]
+                tok_in = tokenizer(doc, return_tensors="pt", padding=True)
+                emb = model(**tok_in).pooler_output.squeeze().detach()
+                emb_squeeze = emb.squeeze()
+                sum_diff = float(torch.sum(torch.abs(emb_squeeze - processed_embeddings[i])).detach())
+                assert sum_diff <= 0.015, f"Sum difference too high. {i=}"  # test set had max diff of 0.008
+                i += 1
+
+        return
+
+    i = 0
+    for doc, labels in doc_gen:
+        doc_emb = processed_embeddings[i]
+        lab_emb = processed_labels[i]
+
+        yield (doc, doc_emb), (labels, lab_emb)
+        i += 1
+
+
 if __name__ == '__main__':
-    process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
-                       for name in ["train", "val", "test"]])
+    csv_pt_pairs("test", assert_tests=True)
+
+    # process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
+    #                    for name in ["train", "val", "test"]])
     # for d, ls in g:
     #     print(d[:min(len(d), 100)], ls)
