@@ -7,8 +7,8 @@ Author(s): Keith Allatt,
 """
 import datetime
 from typing import Union
+from data_cleaning import csv_pt_pairs
 
-import numpy as np
 import os.path
 from pathlib import Path
 
@@ -16,7 +16,7 @@ from tqdm import tqdm
 
 import pickle
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, Dataset
@@ -343,7 +343,6 @@ def _tot_params_helper(model):
 
 
 def get_param_sizes(model):
-
     ret = dict()
     ret["RNN"] = _tot_params_helper(model.rnn)
     for i in range(len(model.embedding_fcs)):
@@ -353,5 +352,41 @@ def get_param_sizes(model):
     return ret
 
 
+def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"):
+    """
+    Finds an example, looking for either a correct classification or an incorrect classification.
+
+    :param model: The Hierarchical RNN thats been trained.
+    :param l1: Find a correct/incorrect classification at the l1 level.
+    :param l2: Find a correct/incorrect classification at the l2 level.
+    :param l3: Find a correct/incorrect classification at the l3 level.
+    :param matches: True if looking for a correct classification, False for an incorrect classification.
+    :param dataset: The data set to look for examples in; by default, the testing set.
+    :return: A wiki summary, the predicted labels, the actual labels.
+    """
+
+    for docs, labs in csv_pt_pairs(dataset):
+        summary, doc_embedding = docs
+        label_text, label_emb = labs
+
+        output = model(doc_embedding)
+
+        corrects = []
+        for i in range(len(model.output_sizes)):
+            pred = output[i].max(1, keepdim=True)[1]
+            corrects.append(pred.eq(label_emb[i].view_as(pred)))
+
+        is_example = True
+
+        for i in range(3):
+            # want not (l_i => corrects[i] == matches),
+            # which is equivalent to l_i and corrects[i] != matches
+            if [l1, l2, l3][i] and corrects[i] != matches:
+                is_example = False
+
+        if is_example:
+            return summary, label_emb, output
+
 if __name__ == "__main__":
+    # print(find_example(None))
     pass

@@ -156,7 +156,6 @@ def train(model, train_data, valid_data, batch_size=32, num_epochs=7,
     axs[1].set_ylabel("Accuracy")
 
 
-
 if __name__ == "__main__":
 
     import numpy as np
