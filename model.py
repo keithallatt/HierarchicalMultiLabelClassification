@@ -19,8 +19,8 @@ class DBPedia(Dataset):
     def __init__(self, emb_file, lab_file, load_func=torch.load, obs=None):
         
         super(Dataset, self).__init__()
-        self.embs = load_func(emb_file)[:obs]
-        self.labs = load_func(lab_file)[:obs]
+        self.embs = load_func(emb_file)[:obs] # array of document embeddings
+        self.labs = load_func(lab_file)[:obs] # array of corresponding labels: (l1,l2,l3) for each doc
 
     def __len__(self):
         return self.embs.shape[0]
@@ -40,7 +40,7 @@ class HierarchicalRNN(nn.Module):
         self.output_sizes = output_sizes
 
         self.embedding_fcs = nn.ModuleList()
-        for fc_in_size in (input_size,) + output_sizes[:-1]:
+        for fc_in_size in (input_size,) + output_sizes[:-1]:  # (768, 9, 70, 219)
             self.embedding_fcs.append(
                 make_layer_mult_mlp(fc_in_size, emb_size, emb_size_mults)
             )
@@ -56,6 +56,7 @@ class HierarchicalRNN(nn.Module):
                 make_layer_mult_mlp(emb_size, fc_out_size, clf_size_mults)
             )
 
+    # doc = 1x748
     def forward(self, doc_emb: torch.tensor):
 
         in_data = doc_emb
@@ -64,14 +65,16 @@ class HierarchicalRNN(nn.Module):
         for emb_fc, clf_fc in zip(self.embedding_fcs, self.classifier_fcs):
 
             emb = emb_fc(in_data)
+            
             # add sequence length dimension
             emb = torch.unsqueeze(emb, dim=0)
-            out, hid = self.rnn(emb, last_hidden)
+            # [batch_size, seq_len, repr_dim]
+            out, hid = self.rnn(emb, last_hidden) # gets passed a single document embedding, not a sequence?
             # remove sequence length dimension
             clf = clf_fc(out)
             clf = torch.squeeze(clf, dim=0)
 
-            preds.append(clf)
+            preds.append(clf) 
             in_data = clf
             last_hidden = hid
 
@@ -162,9 +165,20 @@ if __name__ == "__main__":
     import numpy as np
     from transformers import BertTokenizer, BertModel
 
+    emb_file = "processed_data/DBPEDIA_test_embeddings.pt"
+    labels_file = "processed_data/DBPEDIA_test_labels.pt"
+
+    train_test = DBPedia(emb_file,
+                    labels_file,
+                    obs=3000)
+
+    # input size = BERT embedding size
+    # 
     pred_model = HierarchicalRNN(
         input_size=768, emb_size=100, output_sizes=(9, 70, 219)
     )
+
+    print(pred_model)
 
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     emb_model = BertModel.from_pretrained("bert-base-uncased")
@@ -172,22 +186,17 @@ if __name__ == "__main__":
     raw_docs = [("We had given AM sentience. Inadvertently, of course, but "
                  "sentience nonetheless. But it had been trapped. AM wasn't "
                  "God, he was a machine. We had created him to think, but "
-                 "there was nothing it could do with that creativity."),
-                ("Without those weapons, often though he had used them "
-                 "against himself, Man would never have conquered his world. "
-                 "Into them he had put his heart and soul, and for ages they "
-                 "had served him well. But now, as long as they existed, he "
-                 "was living on borrowed time.")]
+                 "there was nothing it could do with that creativity.")
+                ]
 
     doc = tokenizer(raw_docs, return_tensors='pt', padding=True)
     doc_emb = emb_model(**doc).pooler_output
 
     preds = pred_model(doc_emb)
-
-    for raw in raw_docs:
-        raw_sents = raw.split('. ')
-        sent = tokenizer(raw_sents, return_tensors='pt', padding=True)
-        sent_emb = emb_model(**sent).pooler_output
-        preds = pred_model(sent_emb)
+    # for raw in raw_docs:
+    #     raw_sents = raw.split('. ')
+    #     sent = tokenizer(raw_sents, return_tensors='pt', padding=True)
+    #     sent_emb = emb_model(**sent).pooler_output
+    #     preds = pred_model(sent_emb)
     
     print("DONE")

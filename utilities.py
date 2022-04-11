@@ -115,6 +115,8 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     :param str_repr: Represent the accuracy as a string if true, else a ratio of correct to total elements.
     :param max_total: The maximum number of data points to evaluate (used for estimation).
     """
+
+  
     dataloader = DataLoader(data, batch_size=500)
 
     model.eval()  # annotation for evaluation; sets dropout and batch norm for evaluation.
@@ -123,8 +125,9 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     total = 0
 
     for xs, ts in dataloader:
-
+        
         output = model(xs)
+        
         for i in range(len(model.output_sizes)):
             pred = output[i].max(1, keepdim=True)[1]
             correct += pred.eq(ts[:,i].view_as(pred)).sum().item()
@@ -145,7 +148,10 @@ def estimate_accuracy(model: nn.Module, data: Dataset) -> float:
     """
     return get_accuracy(model, data, max_total=2000)
 
-
+'''
+Hidden units are a multiple of the input size
+# of hidden units get bigger as mlp progresses based on layer_multiples = (x,x,x)
+'''
 def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tuple) -> nn.Sequential:
     """Make MLP with each layer defined as a multiple of the previous.
     """
@@ -160,12 +166,13 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
 
 
 # MODEL TRAINING FUNCTIONS @ KEITH.ALLATT, RENATO.ZIMMERMANN
-def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num_epochs=7,
+def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num_epochs=20,
           calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0,
           device="cpu", checkpoint_path=None):
     """
     Train a model.
     """
+
 
     # can add a train_lock attribute to a model to prevent the train function from making changes.
     if hasattr(model, "train_lock"):
@@ -205,10 +212,13 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                 xs, ts = xs.to(device), ts.to(device)
                 preds = model(xs)
 
+
                 # loss here...
                 loss = 0
                 for i, d in enumerate(model.output_sizes):
-                    loss += criterion(preds[i], to_one_hot(ts[:,i], d))
+                    
+                    # NxC
+                    loss += criterion(preds[i], to_one_hot(ts[:,i], d))  # conversion to 1-hot vector necessary?
 
                 xs.detach(), ts.detach()
 
@@ -228,6 +238,8 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                     va = get_accuracy(model, valid_data)
                     train_acc.append(ta)
                     val_acc.append(va)
+
+    
 
                     if all(x >= train_until for x in set(train_acc[-2:])) or n_batch >= max_iterations:
                         done = True
