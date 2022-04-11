@@ -23,6 +23,8 @@ from torch.utils.data import DataLoader, Dataset
 import torch.optim as optim
 import matplotlib.pyplot as plt
 
+import numpy as np
+
 
 def make_progressbar(length: int, progress: float, naive: bool = False, time_start: float = None) -> str:
     """
@@ -114,13 +116,16 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     :param data: The data set to be evaluated by the model.
     :param str_repr: Represent the accuracy as a string if true, else a ratio of correct to total elements.
     :param max_total: The maximum number of data points to evaluate (used for estimation).
+
+    TODO: modify to track l1,l2,l3 accuracy individually
     """
     dataloader = DataLoader(data, batch_size=500)
 
     model.eval()  # annotation for evaluation; sets dropout and batch norm for evaluation.
 
-    correct = 0
     total = 0
+
+    category_correct = [0,0,0]
 
     for xs, ts in dataloader:
 
@@ -129,13 +134,17 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
         output = model(xs)
         for i in range(len(model.output_sizes)):
             pred = output[i].max(1, keepdim=True)[1]
-            correct += pred.eq(ts[:,i].view_as(pred)).sum().item()
+            category_correct[i] += pred.eq(ts[:,i].view_as(pred)).sum().item()
             total += xs.shape[0]
 
         xs.detach(), ts.detach()
 
         if max_total is not None and total > max_total*len(model.output_sizes):
             break
+
+    total_correct = np.sum(category_correct)
+
+    return [total_correct / total] + category_correct/total 
 
     return f"{correct} / {total} ({correct/total:.4f})" if str_repr else (correct / total)
 
@@ -187,7 +196,12 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    its, its_sub, losses, train_acc, val_acc = [], [], [], [], []
+    its, its_sub = [], []
+  
+    category_losses = [[], [], [], []]
+    category_train_accs = [[], [], [], []]
+    category_val_accs = [[], [], [], []]
+
 
     n_batch = 0
     # for pickled models, if training_iterations is an attribute, then
@@ -210,28 +224,43 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                 preds = model(xs)
 
                 # loss here...
-                loss = 0
+                loss_sum = 0
+                category_losses = [0,0,0]
                 for i, d in enumerate(model.output_sizes):
-                    loss += criterion(preds[i], to_one_hot(ts[:,i], d, device=device))
+                    loss = criterion(preds[i], to_one_hot(ts[:,i], d, device=device))
+                    loss_sum += loss
+                    category_losses[i+1].append(float(loss) / batch_size) # avg loss per category
 
+                category_losses[0].append(float(loss_sum) / batch_size) # avg loss across all categories
                 xs.detach(), ts.detach()
 
-                loss.backward()
+                loss_sum.backward()
                 optimizer.step()
                 optimizer.zero_grad()
 
                 its.append(n_batch)
-                losses.append(float(loss)/batch_size)
+                #losses.append(float(loss_sum)/batch_size)
+              
 
                 n_batch += 1
                 n_train += xs.shape[0]
 
                 if calc_acc_every != 0 and n_batch % calc_acc_every == 0:
                     its_sub.append(n_batch)
-                    ta = get_accuracy(model, train_data, device=device)
-                    va = get_accuracy(model, valid_data, device=device)
-                    train_acc.append(ta)
-                    val_acc.append(va)
+                    #category_accs, total_points =  get_accuracy(model, train_data, device=device)
+                    #train_acc.append(np.sum(category_accs))
+
+                    ta, ta_l1, ta_l2, ta_l3 = get_accuracy(model, train_data, device=device)
+                    va, va_l1, va_l2, va_l3 = get_accuracy(model, valid_data, device=device)
+                    #train_acc.append(ta)
+                    #val_acc.append(va)
+
+                    # todo: compute l1,l2,l3 accuracy
+                    train_accs = [ta, ta_l1, ta_l2, ta_l3]
+                    val_accs = [va, va_l1, va_l2, va_l3]
+                    for i in range(4):
+                        category_train_accs[i].append(train_accs[i])
+                        category_val_accs[i].append(val_accs[i])
 
                     if all(x >= train_until for x in set(train_acc[-2:])) or n_batch >= max_iterations:
                         done = True
@@ -261,7 +290,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
     if not train_acc:
         train_acc = [get_accuracy(model, train_data)]
     if not losses:
-        losses = [float(loss) / batch_size]
+        losses = [float(loss_sum) / batch_size]
     if not val_acc:
         val_acc = [get_accuracy(model, valid_data, device=device)]
     if not its_sub:
@@ -272,7 +301,8 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
     if hasattr(model, "training_iterations"):
         model.training_iterations = n_batch
 
-    return its, its_sub, losses, train_acc, val_acc
+    return its, its_sub, category_losses, category_train_accs, category_val_accs
+    #return its, its_sub, losses, train_acc, val_acc
 
 
 def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x,

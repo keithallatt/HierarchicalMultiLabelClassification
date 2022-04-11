@@ -25,6 +25,10 @@ validation_data = Path("./dbpedia_data/DBPEDIA_val.csv")
 testing_data = Path("./dbpedia_data/DBPEDIA_test.csv")
 
 
+training_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l1.csv")
+validation_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l2.csv")
+testing_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l3.csv")
+
 class WordIdMapping:
     def __init__(self, n_levels):
         self.n_levels = n_levels
@@ -183,9 +187,10 @@ def csv_pt_pairs(dataset, assert_tests=False):
 
 
 if __name__ == '__main__':
-    csv_pt_pairs("test", assert_tests=True)
-
-    # process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
-    #                    for name in ["train", "val", "test"]])
+    # csv_pt_pairs("test", assert_tests=True)
+    process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
+                      for name in ["train_small_l1", "train_small_l2", "train_small_l3"]])
+    #process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
+    #                   for name in ["train", "val", "test"]])
     # for d, ls in g:
     #     print(d[:min(len(d), 100)], ls)
