@@ -112,21 +112,15 @@ def to_one_hot(z: torch.tensor, d: int, device="cpu") -> torch.tensor:
     return torch.eye(d)[z].to(device)
 
 
-def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_total: int = None, device="cpu") -> Union[str, float]:
+def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_total: int = None, device="cpu") -> Union[str, list[float]]:
     """
-    Calculate accuracy for a given model and dataset.
+    Calculate per-category and total accuracies for a given model and dataset.
 
     :param model: The PyTorch Model being evaluated.
     :param data: The data set to be evaluated by the model.
     :param str_repr: Represent the accuracy as a string if true, else a ratio of correct to total elements.
     :param max_total: The maximum number of data points to evaluate (used for estimation).
 
-    TODO: modify to track l1,l2,l3 accuracy individually
-
-    Total : (correct / total)
-    L1 : (correct / total)
-    L2 : (correct / total)
-    L3 : (correct / total)
 
     """
     dataloader = DataLoader(data, batch_size=500)
@@ -134,11 +128,10 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     model.eval()  # annotation for evaluation; sets dropout and batch norm for evaluation.
 
     num_points = 0 
-
     category_correct = np.asarray([0,0,0,0]) # number of l1,l2,l3,total correct predictions
    
 
-    for xs, ts in dataloader: # grab a batch of 500 (or less if data does not divide evenly into 500)
+    for xs, ts in dataloader: # grab a batch of data
 
         xs, ts = xs.to(device), ts.to(device)
         num_points += xs.shape[0]
@@ -149,19 +142,18 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
             num_correct = pred.eq(ts[:,i].view_as(pred)).sum().item()
             category_correct[i] += num_correct # update per category correct predictions
             category_correct[NUM_LABELS] += num_correct # update total correct predictions across categories
-            #total += xs.shape[0]
-
+           
         xs.detach(), ts.detach()
 
-        # if max_total is not None and total > max_total*len(model.output_sizes):
-        #     break
+        if max_total is not None and num_points > max_total:
+            break
 
     num_points_across_categories = num_points * NUM_LABELS
-    accuracies = category_correct[0:NUM_LABELS] / num_points
-    accuracies = np.append(accuracies, category_correct[-1] / num_points_across_categories) # add avg accuracy across all categories
+    accuracies = category_correct[0:NUM_LABELS] / num_points # per category accuracies
+    accuracies = np.append(accuracies, category_correct[-1] / num_points_across_categories) # add accuracy across all categories
   
 
-    acc_str = (f"Total : ({category_correct[-1]} / {num_points_across_categories}) {accuracies[-1]}%\n" 
+    acc_str = (f"Total : ({category_correct[-1]} / {num_points_across_categories}) {accuracies[-1]}\n" 
                f"L1 : ({category_correct[0]} / {num_points}) {accuracies[0]}\n"  
                f"L2 : ({category_correct[1]} / {num_points}) {accuracies[1]}\n"   
                f"L3 : ({category_correct[2]} / {num_points}) {accuracies[2]}")   
@@ -169,7 +161,6 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
            
     return acc_str if str_repr else accuracies
 
-    #return f"{correct} / {total} ({correct/total:.4f})" if str_repr else (correct / total)
 
 
 def estimate_accuracy(model: nn.Module, data: Dataset, device="cpu") -> float:
@@ -221,8 +212,9 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
     its, its_sub = [], []
   
-    # overall, l1, l2 and l3 losses/accuracies
-    # losses[i] = loss for Li category. losses[NUM_LABELS] = loss across all categories
+    
+    # track per-category loss and accuracies
+    # Ex. losses[0] = L1 losses, losses[1] = L2 losses, losses[NUM_LABELS] = losses across all categories
     losses = [[], [], [], []]
     train_accs = [[], [], [], []]
     val_accs = [[], [], [], []]
@@ -242,7 +234,6 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
             n_train = 0
             for xs, ts in train_loader:
-                #print("batch size {}".format(xs.shape[0]))
                 model.train()
 
                 xs, ts = xs.to(device), ts.to(device)
@@ -252,6 +243,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
                 for i, d in enumerate(model.output_sizes):
                     # per category mini-batch loss
+                    # note that criterion() computes avg loss by default
                     loss = criterion(preds[i], to_one_hot(ts[:,i], d, device=device))
                    
                     loss_sum += loss
@@ -283,9 +275,10 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                         train_accs[i].append(batch_train_accs[i])
                         val_accs[i].append(batch_val_accs[i])
 
-                    # if all(x >= train_until for x in set(train_acc[-2:])) or n_batch >= max_iterations:
-                    #     done = True
-                    #     break
+                    # train_accs[-1] = accs across all categories
+                    if all(x >= train_until for x in set(train_accs[-1][-2:])) or n_batch >= max_iterations:
+                        done = True
+                        break
 
                 if not (n_batch % 10):
                     it_progress = tqdm.format_meter(n_train, tot_train, time.time()-start_time,
@@ -307,9 +300,8 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
         its = its[:n]
         its_sub = its_sub[:n]
         losses = [category[:n] for category in losses]
-        #losses = losses[:n]
         train_accs = [category[:n] for category in train_accs]
-        #train_acc = train_acc[:n]
+        
 
     # what is this for?
     if not train_accs:
@@ -331,11 +323,14 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
         model.training_iterations = n_batch
 
     return its, its_sub, losses, train_accs, val_accs
-    #return its, its_sub, losses, train_acc, val_acc
+    
 
 
 
 def gen_category_loss_plots(its, losses):
+    '''
+    generate l1,l2,l3 loss curves
+    '''
     for i in range(NUM_LABELS):
         loss_fig, ax = plt.subplots()
         ax.set_title(f"L{i+1} Loss Curve")
@@ -345,8 +340,9 @@ def gen_category_loss_plots(its, losses):
         loss_fig.show()
 
 def gen_category_acc_plots(its_sub, train_accs, val_accs):
-    print("------------------")
-    print(train_accs[0])
+    '''
+    generate l1,l2,l3 accuracy/learning curves
+    '''
     for i in range(NUM_LABELS):
         train_fig, ax = plt.subplots()
         ax.set_title(f"L{i+1} Learning Curve")

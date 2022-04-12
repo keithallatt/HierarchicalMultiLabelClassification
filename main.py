@@ -3,24 +3,46 @@ main.py
 
 :)
 """
+from unicodedata import category
 import torch
 
 from utilities import train_model, get_param_sizes
 from model import DBPedia, HierarchicalRNN
 
 
+
+
 if __name__ == "__main__":
 
+  
+
     file_fmt = "processed_data/DBPEDIA_{split}_{var}.pt"
+    small_file_fmt = "processed_data/DBPEDIA_{split}_small_{var}.pt"
+    l2_l1_file_fmt = "processed_data/DBPEDIA_l2_l1_Agent_{var}.pt"
+
+
     obs = 4000 # set this to some lower number when testing
-    train_obs= 6000
-    val_obs = 3000
-    test_obs = 3000
+    train_obs= 3000
+    val_obs = 1000
+    test_obs = 1000
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
+    # Uncomment train based on what training set you want to use
+
+    # train = DBPedia(small_file_fmt.format(split="train", var="embeddings", category="l2"),
+    #                 small_file_fmt.format(split="train", var="labels", category="l2"),
+    #                 obs=train_obs)
+
+    # train = DBPedia(l2_l1_file_fmt.format(var="embeddings"),
+    #                 l2_l1_file_fmt.format(var="labels"),
+    #                 obs=train_obs)
+       
+    
     train = DBPedia(file_fmt.format(split="train", var="embeddings"),
-                    file_fmt.format(split="train", var="labels"),
-                    obs=train_obs)
+                        file_fmt.format(split="train", var="labels"),
+                        obs=train_obs)
+
+
     val = DBPedia(file_fmt.format(split="val", var="embeddings"),
                     file_fmt.format(split="val", var="labels"),
                     obs=val_obs)
@@ -34,7 +56,7 @@ if __name__ == "__main__":
 
     train_opts = {
         "calc_acc_every": 5,
-        "num_epochs": 30,
+        "num_epochs": 7,
     }
 
     
