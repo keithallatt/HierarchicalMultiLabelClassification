@@ -25,6 +25,9 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
+# number of labels used in multi-label classification
+NUM_LABELS = 3 # l1,l2,l3
+
 
 def make_progressbar(length: int, progress: float, naive: bool = False, time_start: float = None) -> str:
     """
@@ -118,35 +121,62 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     :param max_total: The maximum number of data points to evaluate (used for estimation).
 
     TODO: modify to track l1,l2,l3 accuracy individually
+
+
+    Total : (correct / total)
+    L1 : (correct / total)
+    L2 : (correct / total)
+    L3 : (correct / total)
+
     """
+    print("ACC")
     dataloader = DataLoader(data, batch_size=500)
 
     model.eval()  # annotation for evaluation; sets dropout and batch norm for evaluation.
 
-    total = 0
+    num_points = 0 
 
-    category_correct = [0,0,0]
+    category_correct = np.asarray([0,0,0,0]) # number of l1,l2,l3 correct predictions
+    accuracies = np.asarray([0,0,0]) # number of l1,l2,l3 accuracies
 
-    for xs, ts in dataloader:
+    for xs, ts in dataloader: # grab a batch of 500 (or less if data does not divide evenly into 500)
 
         xs, ts = xs.to(device), ts.to(device)
+        num_points += xs.shape[0]
 
-        output = model(xs)
+        output = model(xs)  # returns per category predictions.  3 x N x Li where Li is the number of classes in Li
         for i in range(len(model.output_sizes)):
             pred = output[i].max(1, keepdim=True)[1]
-            category_correct[i] += pred.eq(ts[:,i].view_as(pred)).sum().item()
-            total += xs.shape[0]
+            num_correct = pred.eq(ts[:,i].view_as(pred)).sum().item()
+            category_correct[i] += num_correct # update per category correct predictions
+            category_correct[NUM_LABELS] += num_correct # update total correct predictions across categories
+            #total += xs.shape[0]
 
         xs.detach(), ts.detach()
 
-        if max_total is not None and total > max_total*len(model.output_sizes):
-            break
+        # if max_total is not None and total > max_total*len(model.output_sizes):
+        #     break
 
-    total_correct = np.sum(category_correct)
+    num_points_across_categories = num_points * NUM_LABELS
+    accuracies = category_correct[0:NUM_LABELS] / num_points
+    np.append(accuracies, category_correct[-1] / num_points_across_categories)
+    print(category_correct)
+    print(accuracies)
 
-    return [total_correct / total] + category_correct/total 
+    print("----------------------------------------------------")
 
-    return f"{correct} / {total} ({correct/total:.4f})" if str_repr else (correct / total)
+    str_repr = f'''
+                Total : ({category_correct[-1]} / {num_points_across_categories})
+                L1 : ({category_correct[0]} / {num_points})
+                L2 : ({category_correct[1]} / {num_points})
+                L3 : ({category_correct[2]} / {num_points})
+                '''
+
+    print(str_repr)
+    # fix
+    return accuracies
+
+    #return f"{correct} / {total} ({correct/total:.4f})" if str_repr else (correct / total)
 
 
 def estimate_accuracy(model: nn.Module, data: Dataset, device="cpu") -> float:
@@ -198,6 +228,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
     its, its_sub = [], []
   
+    # overall, l1, l2 and l3 losses/accuracies
     category_losses = [[], [], [], []]
     category_train_accs = [[], [], [], []]
     category_val_accs = [[], [], [], []]
@@ -223,15 +254,16 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                 xs, ts = xs.to(device), ts.to(device)
                 preds = model(xs)
 
-                # loss here...
-                loss_sum = 0
-                category_losses = [0,0,0]
+                
+                loss_sum = 0 # sum of l1+l2+l3 losses 
+
                 for i, d in enumerate(model.output_sizes):
+                    # per category mini-batch loss
                     loss = criterion(preds[i], to_one_hot(ts[:,i], d, device=device))
                     loss_sum += loss
-                    category_losses[i+1].append(float(loss) / batch_size) # avg loss per category
+                    category_losses[i].append(float(loss) / batch_size) # avg loss per category
 
-                category_losses[0].append(float(loss_sum) / batch_size) # avg loss across all categories
+                category_losses[2].append(float(loss_sum) / batch_size) # avg loss across all categories
                 xs.detach(), ts.detach()
 
                 loss_sum.backward()
@@ -250,14 +282,14 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                     #category_accs, total_points =  get_accuracy(model, train_data, device=device)
                     #train_acc.append(np.sum(category_accs))
 
-                    ta, ta_l1, ta_l2, ta_l3 = get_accuracy(model, train_data, device=device)
-                    va, va_l1, va_l2, va_l3 = get_accuracy(model, valid_data, device=device)
+                    ta_l1, ta_l2, ta_l3, ta = get_accuracy(model, train_data, device=device)
+                    va_l1, va_l2, va_l3, va = get_accuracy(model, valid_data, device=device)
                     #train_acc.append(ta)
                     #val_acc.append(va)
 
                     # todo: compute l1,l2,l3 accuracy
-                    train_accs = [ta, ta_l1, ta_l2, ta_l3]
-                    val_accs = [va, va_l1, va_l2, va_l3]
+                    train_accs = [ta_l1, ta_l2, ta_l3, ta]
+                    val_accs = [va_l1, va_l2, va_l3, va]
                     for i in range(4):
                         category_train_accs[i].append(train_accs[i])
                         category_val_accs[i].append(val_accs[i])
