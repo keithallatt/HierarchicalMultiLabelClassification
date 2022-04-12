@@ -7,6 +7,7 @@ Author(s): Keith Allatt,
 """
 import datetime
 from typing import Union
+from unicodedata import category
 from data_cleaning import csv_pt_pairs
 
 import os.path
@@ -129,7 +130,6 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     L3 : (correct / total)
 
     """
-    print("ACC")
     dataloader = DataLoader(data, batch_size=500)
 
     model.eval()  # annotation for evaluation; sets dropout and batch norm for evaluation.
@@ -137,7 +137,7 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     num_points = 0 
 
     category_correct = np.asarray([0,0,0,0]) # number of l1,l2,l3 correct predictions
-    accuracies = np.asarray([0,0,0]) # number of l1,l2,l3 accuracies
+    #accuracies = np.asarray([0,0,0]) # number of l1,l2,l3 accuracies
 
     for xs, ts in dataloader: # grab a batch of 500 (or less if data does not divide evenly into 500)
 
@@ -159,22 +159,17 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
 
     num_points_across_categories = num_points * NUM_LABELS
     accuracies = category_correct[0:NUM_LABELS] / num_points
-    np.append(accuracies, category_correct[-1] / num_points_across_categories)
-    print(category_correct)
-    print(accuracies)
+    accuracies = np.append(accuracies, category_correct[-1] / num_points_across_categories)
+  
 
-    print("----------------------------------------------------")
-
-    str_repr = f'''
-                Total : ({category_correct[-1]} / {num_points_across_categories})
-                L1 : ({category_correct[0]} / {num_points})
-                L2 : ({category_correct[1]} / {num_points})
-                L3 : ({category_correct[2]} / {num_points})
-                '''
-
-    print(str_repr)
+    acc_str = (f"Total : ({category_correct[-1]} / {num_points_across_categories}) {accuracies[-1]}%\n" 
+               f"L1 : ({category_correct[0]} / {num_points}) {accuracies[0]}\n"  
+               f"L2 : ({category_correct[1]} / {num_points}) {accuracies[1]}\n"   
+               f"L3 : ({category_correct[2]} / {num_points}) {accuracies[2]}")   
+    
+           
     # fix
-    return accuracies
+    return acc_str if str_repr else accuracies
 
     #return f"{correct} / {total} ({correct/total:.4f})" if str_repr else (correct / total)
 
@@ -229,9 +224,9 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
     its, its_sub = [], []
   
     # overall, l1, l2 and l3 losses/accuracies
-    category_losses = [[], [], [], []]
-    category_train_accs = [[], [], [], []]
-    category_val_accs = [[], [], [], []]
+    losses = [[], [], [], []]
+    train_accs = [[], [], [], []]
+    val_accs = [[], [], [], []]
 
 
     n_batch = 0
@@ -248,7 +243,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
             n_train = 0
             for xs, ts in train_loader:
-
+                #print("batch size {}".format(xs.shape[0]))
                 model.train()
 
                 xs, ts = xs.to(device), ts.to(device)
@@ -259,11 +254,15 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
                 for i, d in enumerate(model.output_sizes):
                     # per category mini-batch loss
+                    
                     loss = criterion(preds[i], to_one_hot(ts[:,i], d, device=device))
+                   
                     loss_sum += loss
-                    category_losses[i].append(float(loss) / batch_size) # avg loss per category
+                    losses[i].append(float(loss))  # avg loss per category
 
-                category_losses[2].append(float(loss_sum) / batch_size) # avg loss across all categories
+                
+                losses[NUM_LABELS].append(float(loss_sum) / NUM_LABELS) # avg loss across all categories
+            
                 xs.detach(), ts.detach()
 
                 loss_sum.backward()
@@ -271,39 +270,32 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                 optimizer.zero_grad()
 
                 its.append(n_batch)
-                #losses.append(float(loss_sum)/batch_size)
               
-
                 n_batch += 1
                 n_train += xs.shape[0]
 
                 if calc_acc_every != 0 and n_batch % calc_acc_every == 0:
                     its_sub.append(n_batch)
-                    #category_accs, total_points =  get_accuracy(model, train_data, device=device)
-                    #train_acc.append(np.sum(category_accs))
+                   
+                    # returns per category + total accuracies
+                    batch_train_accs = get_accuracy(model, train_data, device=device)
+                    batch_val_accs = get_accuracy(model, valid_data, device=device)
+                 
+            
+                    for i in range(NUM_LABELS+1):
+                        train_accs[i].append(batch_train_accs[i])
+                        val_accs[i].append(batch_val_accs[i])
 
-                    ta_l1, ta_l2, ta_l3, ta = get_accuracy(model, train_data, device=device)
-                    va_l1, va_l2, va_l3, va = get_accuracy(model, valid_data, device=device)
-                    #train_acc.append(ta)
-                    #val_acc.append(va)
+                    # if all(x >= train_until for x in set(train_acc[-2:])) or n_batch >= max_iterations:
+                    #     done = True
+                    #     break
 
-                    # todo: compute l1,l2,l3 accuracy
-                    train_accs = [ta_l1, ta_l2, ta_l3, ta]
-                    val_accs = [va_l1, va_l2, va_l3, va]
-                    for i in range(4):
-                        category_train_accs[i].append(train_accs[i])
-                        category_val_accs[i].append(val_accs[i])
-
-                    if all(x >= train_until for x in set(train_acc[-2:])) or n_batch >= max_iterations:
-                        done = True
-                        break
-
-                if not (n_batch % 10):
-                    it_progress = tqdm.format_meter(n_train, tot_train, time.time()-start_time,
-                                                    prefix=f"E:[{epoch+1}/{num_epochs}] I")
-                    ta_progress = make_progressbar(8, estimate_accuracy(model, train_data, device=device))
-                    va_progress = make_progressbar(8, estimate_accuracy(model, valid_data, device=device))
-                    print(f"\r{it_progress} [TA:{ta_progress}] [VA:{va_progress}] ", end='')
+                # if not (n_batch % 10):
+                #     it_progress = tqdm.format_meter(n_train, tot_train, time.time()-start_time,
+                #                                     prefix=f"E:[{epoch+1}/{num_epochs}] I")
+                #     ta_progress = make_progressbar(8, estimate_accuracy(model, train_data, device=device))
+                #     va_progress = make_progressbar(8, estimate_accuracy(model, valid_data, device=device))
+                #     print(f"\r{it_progress} [TA:{ta_progress}] [VA:{va_progress}] ", end='')
 
             if done:
                 break
@@ -312,19 +304,23 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
             torch.save(model.state_dict(),
                         checkpoint_path + f"model_{check_prefix}_{epoch}")
 
+    
     except KeyboardInterrupt:
-        n = len(val_acc)
+        n = len(val_accs[0])
         its = its[:n]
         its_sub = its_sub[:n]
-        losses = losses[:n]
-        train_acc = train_acc[:n]
+        losses = [category[:n] for category in losses]
+        #losses = losses[:n]
+        train_accs = [category[:n] for category in train_accs]
+        #train_acc = train_acc[:n]
 
-    if not train_acc:
-        train_acc = [get_accuracy(model, train_data)]
+    # what is this for?
+    if not train_accs:
+        train_accs = get_accuracy(model, train_data)
     if not losses:
         losses = [float(loss_sum) / batch_size]
-    if not val_acc:
-        val_acc = [get_accuracy(model, valid_data, device=device)]
+    if not val_accs:
+        val_accs = get_accuracy(model, valid_data, device=device)
     if not its_sub:
         its_sub = [n_batch]
 
@@ -333,12 +329,36 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
     if hasattr(model, "training_iterations"):
         model.training_iterations = n_batch
 
-    return its, its_sub, category_losses, category_train_accs, category_val_accs
+    return its, its_sub, losses, train_accs, val_accs
     #return its, its_sub, losses, train_acc, val_acc
 
 
+
+def gen_category_loss_plots(its, losses):
+    for i in range(NUM_LABELS):
+        loss_fig, ax = plt.subplots()
+        ax.set_title(f"L{i+1} Loss Curve")
+        ax.plot(its, losses[i], label="Train")
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel("Loss")
+        loss_fig.show()
+
+def gen_category_acc_plots(its_sub, train_accs, val_accs):
+    print("------------------")
+    print(train_accs[0])
+    for i in range(NUM_LABELS):
+        train_fig, ax = plt.subplots()
+        ax.set_title(f"L{i+1} Learning Curve")
+        ax.plot(its_sub, train_accs[i], label="Train")
+        ax.plot(its_sub, val_accs[i], label="Validation")
+        ax.set_xlabel("Iterations")
+        ax.set_ylabel("Training Accuracy")
+        ax.legend(loc='best')
+        train_fig.show()
+
+
 def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x,
-                outfile="model.pickle", train_opts=None, device="cpu", **kwargs):
+                outfile="model.pickle", train_opts=None, device="cpu", show_category_stats=True, **kwargs):
 
     # can specify data_loader, by default, the identify function x -> x. Acts like a preprocessor.
     training_dataset = data_loader(train_data)
@@ -347,57 +367,82 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
 
     if train_opts is None:
         train_opts = dict()
-    its, its_sub, losses, train_acc, val_acc = train(model, training_dataset, validation_dataset,
+    its, its_sub, losses, train_accs, val_accs = train(model, training_dataset, validation_dataset,
                                                      device=device, **train_opts)
 
     show = kwargs.get("show_plts", False)
     ask = kwargs.get("ask", False)
 
+    
     loss_fig, train_fig = None, None
     if show:
         if len(its) > 1:
             try:
                 loss_fig, ax = plt.subplots()
-                ax.set_title("Loss Curve")
-                ax.plot(its, losses, label="Train")
+                ax.set_title("Loss Curve Across Categories")
+                ax.plot(its, losses[-1], label="Train")
                 ax.set_xlabel("Iterations")
                 ax.set_ylabel("Loss")
                 loss_fig.show()
+
+                if show_category_stats:
+                    gen_category_loss_plots(its, losses)
+                    
             except ValueError:
                 print("Loss curve unavailable")
                 print(len(its), len(losses))
 
+    # generate accuracies
+
         if len(its_sub) > 1:
             try:
                 train_fig, ax = plt.subplots()
-                ax.set_title("Learning Curve")
-                ax.plot(its_sub, train_acc, label="Train")
-                ax.plot(its_sub, val_acc, label="Validation")
+                ax.set_title("Learning Curve Across All Categories")
+                ax.plot(its_sub, train_accs[-1], label="Train")
+                ax.plot(its_sub, val_accs[-1], label="Validation")
                 ax.set_xlabel("Iterations")
                 ax.set_ylabel("Training Accuracy")
                 ax.legend(loc='best')
                 train_fig.show()
+
+                if show_category_stats:
+                    gen_category_acc_plots(its_sub, train_accs, val_accs)
             except ValueError:
                 print("Learning curve unavailable")
-                print(len(its_sub), len(train_acc), len(val_acc))
+                print(len(its_sub), len(train_accs[-1]), len(val_accs[-1]))
 
-        input("Showing plots. Type anything to continue.")
+    input("Showing plots. Type anything to continue.")
 
-    if train_acc:
-        print("Final Training Accuracy: {}".format(train_acc[-1]))
-    if val_acc:
-        print("Final Validation Accuracy: {}".format(val_acc[-1]))
+    if train_accs:
+        str_repr = "Final Training Accuracy Across All Categories: {}\n".format(train_accs[-1][-1]) + \
+                   "Final L1 Training Accuracy: {}\n".format(train_accs[0][-1]) + \
+                   "Final L2 Training Accuracy: {}\n".format(train_accs[1][-1]) + \
+                   "Final L3 Training Accuracy: {}".format(train_accs[2][-1])    
+            
+        print(str_repr)
+        print("-" * 30)
+    if val_accs:
+         str_repr = "Final Validation Accuracy Across All Categories: {}\n".format(val_accs[-1][-1]) + \
+                    "Final L1 Validation Accuracy: {}\n".format(val_accs[0][-1]) + \
+                    "Final L2 Validation Accuracy: {}\n".format(val_accs[1][-1]) + \
+                    "Final L3 Validation Accuracy: {}".format(val_accs[2][-1])  
+         print(str_repr)
     if test_data is not None:
         print("-" * 30)
         str_repr_test_acc = get_accuracy(model, testing_dataset, str_repr=True, device=device)
+        # str_repr = "Final Test Accuracy Across All Categories: {}\n".format(val_accs[-1][-1]) + \
+        #             "Final L1 Test Accuracy: {}\n".format(test_accs[0][-1]) + \
+        #             "Final L2 Test Accuracy: {}\n".format(al_accs[1][-1]) + \
+        #             "Final L3 Test Accuracy: {}".format(va_accs[2][-1])  
+        #print(str_repr_test_acc)
         print("Final Test Accuracy: {}".format(str_repr_test_acc))
 
-    if ask and input("Save to file? [y/n] > ").lower().strip() == "y":
-        dump_data(outfile, model)
-        if loss_fig is not None:
-            loss_fig.savefig(kwargs.get("loss_fig_out", "loss_curve.png"))
-        if train_fig is not None:
-            train_fig.savefig(kwargs.get("train_fig_out", "train_curve.png"))
+    # if ask and input("Save to file? [y/n] > ").lower().strip() == "y":
+    #     dump_data(outfile, model)
+    #     if loss_fig is not None:
+    #         loss_fig.savefig(kwargs.get("loss_fig_out", "loss_curve.png"))
+    #     if train_fig is not None:
+    #         train_fig.savefig(kwargs.get("train_fig_out", "train_curve.png"))
 
 
 def _tot_params_helper(model):

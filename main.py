@@ -31,8 +31,10 @@ if __name__ == "__main__":
 
     train_opts = {
         "calc_acc_every": 5,
-        "num_epochs": 1
+        "num_epochs": 5,
     }
+
+    
 
     param_sizes = get_param_sizes(model)
 
