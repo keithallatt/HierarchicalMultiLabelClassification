@@ -123,7 +123,6 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
 
     TODO: modify to track l1,l2,l3 accuracy individually
 
-
     Total : (correct / total)
     L1 : (correct / total)
     L2 : (correct / total)
@@ -136,8 +135,8 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
 
     num_points = 0 
 
-    category_correct = np.asarray([0,0,0,0]) # number of l1,l2,l3 correct predictions
-    #accuracies = np.asarray([0,0,0]) # number of l1,l2,l3 accuracies
+    category_correct = np.asarray([0,0,0,0]) # number of l1,l2,l3,total correct predictions
+   
 
     for xs, ts in dataloader: # grab a batch of 500 (or less if data does not divide evenly into 500)
 
@@ -159,7 +158,7 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
 
     num_points_across_categories = num_points * NUM_LABELS
     accuracies = category_correct[0:NUM_LABELS] / num_points
-    accuracies = np.append(accuracies, category_correct[-1] / num_points_across_categories)
+    accuracies = np.append(accuracies, category_correct[-1] / num_points_across_categories) # add avg accuracy across all categories
   
 
     acc_str = (f"Total : ({category_correct[-1]} / {num_points_across_categories}) {accuracies[-1]}%\n" 
@@ -168,7 +167,6 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
                f"L3 : ({category_correct[2]} / {num_points}) {accuracies[2]}")   
     
            
-    # fix
     return acc_str if str_repr else accuracies
 
     #return f"{correct} / {total} ({correct/total:.4f})" if str_repr else (correct / total)
@@ -181,7 +179,7 @@ def estimate_accuracy(model: nn.Module, data: Dataset, device="cpu") -> float:
     :param model: The PyTorch Model being evaluated.
     :param data: The data set to be evaluated by the model.
     """
-    return get_accuracy(model, data, max_total=2000, device=device)
+    return get_accuracy(model, data, max_total=2000, device=device)[-1] # return total accuracy across all categories
 
 
 def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tuple) -> nn.Sequential:
@@ -224,6 +222,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
     its, its_sub = [], []
   
     # overall, l1, l2 and l3 losses/accuracies
+    # losses[i] = loss for Li category. losses[NUM_LABELS] = loss across all categories
     losses = [[], [], [], []]
     train_accs = [[], [], [], []]
     val_accs = [[], [], [], []]
@@ -249,12 +248,10 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                 xs, ts = xs.to(device), ts.to(device)
                 preds = model(xs)
 
-                
                 loss_sum = 0 # sum of l1+l2+l3 losses 
 
                 for i, d in enumerate(model.output_sizes):
                     # per category mini-batch loss
-                    
                     loss = criterion(preds[i], to_one_hot(ts[:,i], d, device=device))
                    
                     loss_sum += loss
@@ -277,7 +274,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                 if calc_acc_every != 0 and n_batch % calc_acc_every == 0:
                     its_sub.append(n_batch)
                    
-                    # returns per category + total accuracies
+                    # returns an array of per category + total accuracies
                     batch_train_accs = get_accuracy(model, train_data, device=device)
                     batch_val_accs = get_accuracy(model, valid_data, device=device)
                  
@@ -290,12 +287,12 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                     #     done = True
                     #     break
 
-                # if not (n_batch % 10):
-                #     it_progress = tqdm.format_meter(n_train, tot_train, time.time()-start_time,
-                #                                     prefix=f"E:[{epoch+1}/{num_epochs}] I")
-                #     ta_progress = make_progressbar(8, estimate_accuracy(model, train_data, device=device))
-                #     va_progress = make_progressbar(8, estimate_accuracy(model, valid_data, device=device))
-                #     print(f"\r{it_progress} [TA:{ta_progress}] [VA:{va_progress}] ", end='')
+                if not (n_batch % 10):
+                    it_progress = tqdm.format_meter(n_train, tot_train, time.time()-start_time,
+                                                    prefix=f"E:[{epoch+1}/{num_epochs}] I")
+                    ta_progress = make_progressbar(8, estimate_accuracy(model, train_data, device=device))
+                    va_progress = make_progressbar(8, estimate_accuracy(model, valid_data, device=device))
+                    print(f"\r{it_progress} [TA:{ta_progress}] [VA:{va_progress}] ", end='')
 
             if done:
                 break
@@ -316,12 +313,16 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
     # what is this for?
     if not train_accs:
+        assert(1 == 0)
         train_accs = get_accuracy(model, train_data)
     if not losses:
+        assert(1 == 0)
         losses = [float(loss_sum) / batch_size]
     if not val_accs:
+        assert(1 == 0)
         val_accs = get_accuracy(model, valid_data, device=device)
     if not its_sub:
+        assert(1 == 0)
         its_sub = [n_batch]
 
     print()
@@ -430,19 +431,14 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
     if test_data is not None:
         print("-" * 30)
         str_repr_test_acc = get_accuracy(model, testing_dataset, str_repr=True, device=device)
-        # str_repr = "Final Test Accuracy Across All Categories: {}\n".format(val_accs[-1][-1]) + \
-        #             "Final L1 Test Accuracy: {}\n".format(test_accs[0][-1]) + \
-        #             "Final L2 Test Accuracy: {}\n".format(al_accs[1][-1]) + \
-        #             "Final L3 Test Accuracy: {}".format(va_accs[2][-1])  
-        #print(str_repr_test_acc)
         print("Final Test Accuracy: {}".format(str_repr_test_acc))
 
-    # if ask and input("Save to file? [y/n] > ").lower().strip() == "y":
-    #     dump_data(outfile, model)
-    #     if loss_fig is not None:
-    #         loss_fig.savefig(kwargs.get("loss_fig_out", "loss_curve.png"))
-    #     if train_fig is not None:
-    #         train_fig.savefig(kwargs.get("train_fig_out", "train_curve.png"))
+    if ask and input("Save to file? [y/n] > ").lower().strip() == "y":
+        dump_data(outfile, model)
+        if loss_fig is not None:
+            loss_fig.savefig(kwargs.get("loss_fig_out", "loss_curve.png"))
+        if train_fig is not None:
+            train_fig.savefig(kwargs.get("train_fig_out", "train_curve.png"))
 
 
 def _tot_params_helper(model):

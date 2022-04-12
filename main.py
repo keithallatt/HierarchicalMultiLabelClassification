@@ -12,18 +12,21 @@ from model import DBPedia, HierarchicalRNN
 if __name__ == "__main__":
 
     file_fmt = "processed_data/DBPEDIA_{split}_{var}.pt"
-    obs = 2000 # set this to some lower number when testing
+    obs = 4000 # set this to some lower number when testing
+    train_obs= 6000
+    val_obs = 3000
+    test_obs = 3000
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     train = DBPedia(file_fmt.format(split="train", var="embeddings"),
                     file_fmt.format(split="train", var="labels"),
-                    obs=obs)
+                    obs=train_obs)
     val = DBPedia(file_fmt.format(split="val", var="embeddings"),
                     file_fmt.format(split="val", var="labels"),
-                    obs=obs)
+                    obs=val_obs)
     test = DBPedia(file_fmt.format(split="test", var="embeddings"),
                     file_fmt.format(split="test", var="labels"),
-                    obs=obs)
+                    obs=test_obs)
 
     model = HierarchicalRNN(
         input_size=768, emb_size=100, output_sizes=(9, 70, 219)
@@ -31,7 +34,7 @@ if __name__ == "__main__":
 
     train_opts = {
         "calc_acc_every": 5,
-        "num_epochs": 5,
+        "num_epochs": 30,
     }
 
     
