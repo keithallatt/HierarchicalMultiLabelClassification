@@ -1,15 +1,13 @@
 """
 gen_small_datasets.py
 
-Generates three datasets to test the ability for the model to predict l1,l2,l3 classes.
-Does it learn the l1-l2-l3 dependencies correctly?
+Generates 3 small datasets for testing models' ability to overfit.
 
-l1: can the model predict l1 classes
+Generates another dataset to test how well the model learns dependencies between L1 and L2 categories.
 
-given l1 class (i.e agent), can the model predict l2 classes?
-
-given l1,l2 classes can the model predict l3 classes?
-
+Ex. If the model is trained on a dataset containing only Agents (L1), how well does it perform on classifying
+articles whose L1 category is Agent? Does it have high L2 accuracy when classifying articles whose L1 category
+is Agent?
 
 
 Author(s): Brandon Jaipersaud
@@ -19,19 +17,20 @@ import csv
 import pickle
 
 
-
 '''
-Agent -> 
+Generates a training set with num_instances of l1_label. Ex. 5000 Agents
 
-check how well model performs with predicting different types of agents
 
-filter train, val, test to only contain agents
+Idea: Train the model on a dataset with only Agents and see how well it can predict 
+the L2 categories that depend on Agents.
+
+Should get high L2 validation/test acc on articles whose L2 categories depend on Agents (L1) but low 
+acc everywhere else.
 '''
-def gen_l2(file_path, num_instances=1000, l1_label="Agent"):
-    small_l2_path = "../DBPEDIA_train_small_l2.csv"
-    l2_labels = {}
-
-    with open(small_l2_path, mode='w') as small_l1_file:
+def gen_l2_l1_dependency(file_path, num_instances=5000, l1_label="Agent"):
+    l2_path = "../dbpedia_data/DBPEDIA_l2_l1_{}_dep.csv".format(l1_label)
+   
+    with open(l2_path, mode='w') as small_l1_file:
         small_l1_file.write("text,l1,l2,l3")
 
         with open(file_path, mode='r') as file:
@@ -40,11 +39,10 @@ def gen_l2(file_path, num_instances=1000, l1_label="Agent"):
             next(csv_file) # skip header
             for line in csv_file:
                 parse_line = line.split(',')
-                # get l1, l2, and l3 category
-                l3 = parse_line[-1].strip()
-                l2 = parse_line[-2].strip()
+                # get l1 category
+                
                 l1 = parse_line[-3].strip()
-                #print(l1)
+               
                 if (l1 == l1_label):
                     small_l1_file.write(line)
                     num_instances -= 1
@@ -53,7 +51,7 @@ def gen_l2(file_path, num_instances=1000, l1_label="Agent"):
 
                     
 
-def check_file_statistics(file_path):
+def gen_file_statistics(file_path):
 
     labels = [{},{},{}]
     category_counts = [0, 0, 0]
@@ -133,9 +131,16 @@ def gen_small_datasets(file_path, num_instances=2):
 
 
 if __name__ == '__main__':
+
     train_path = "../dbpedia_data/DBPEDIA_train.csv"
-    gen_small_datasets(train_path)
-    check_file_statistics(train_path)
-    check_file_statistics("../dbpedia_data/DBPEDIA_train_small_l1.csv")
-    check_file_statistics("../dbpedia_data/DBPEDIA_train_small_l2.csv")
-    check_file_statistics("../dbpedia_data/DBPEDIA_train_small_l3.csv")
+
+    # uncomment based on what dataset you want to generate and what file statistics you want to view
+
+    #gen_small_datasets(train_path)
+    #gen_l2_l1_dependency(train_path)
+
+    #gen_file_statistics("../dbpedia_data/DBPEDIA_l2_l1_Agent_dep.csv")
+
+    #gen_file_statistics("../dbpedia_data/DBPEDIA_train_small_l1.csv")
+    #gen_file_statistics("../dbpedia_data/DBPEDIA_train_small_l2.csv")
+    #gen_file_statistics("../dbpedia_data/DBPEDIA_train_small_l3.csv")
