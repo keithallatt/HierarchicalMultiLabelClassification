@@ -8,6 +8,7 @@ Author(s): Keith Allatt,
 import datetime
 from typing import Union
 from data_cleaning import csv_pt_pairs
+from random import random
 
 import os.path
 from pathlib import Path
@@ -166,7 +167,7 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
 # MODEL TRAINING FUNCTIONS @ KEITH.ALLATT, RENATO.ZIMMERMANN
 def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num_epochs=7,
           calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0,
-          device="cpu", checkpoint_path=None):
+          tf_init=1, tf_decay=0.5, device="cpu", checkpoint_path=None):
     """
     Train a model.
     """
@@ -201,13 +202,17 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
         for epoch in range(num_epochs):
 
+            # tf_prob = (1/(1+tf_decay*epoch))*tf_init
+            tf_prob = tf_init*((1-tf_decay)**epoch)
             n_train = 0
             for xs, ts in train_loader:
 
                 model.train()
 
                 xs, ts = xs.to(device), ts.to(device)
-                preds = model(xs)
+
+                tf_labs = ts if random() <= tf_prob else None
+                preds = model(xs, true_labs=tf_labs)
 
                 # loss here...
                 loss = 0

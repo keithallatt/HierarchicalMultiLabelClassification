@@ -12,7 +12,7 @@ from model import DBPedia, HierarchicalRNN
 if __name__ == "__main__":
 
     file_fmt = "processed_data/DBPEDIA_{split}_{var}.pt"
-    obs = 20000 # set this to some lower number when testing
+    obs = 5000 # set this to some lower number when testing
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     train = DBPedia(file_fmt.format(split="train", var="embeddings"),
@@ -31,6 +31,8 @@ if __name__ == "__main__":
 
     train_opts = {
         "calc_acc_every": 5,
+        "tf_init": 0, 
+        "tf_decay": 0.5
     }
 
     param_sizes = get_param_sizes(model)
