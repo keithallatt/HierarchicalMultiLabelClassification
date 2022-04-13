@@ -554,6 +554,25 @@ def generate_hyperparameters():
     print("-" * 30)
     return hp
 
+def find_best_parameters(num_of_models, model, train, val, test, device):
+    # Later use grid search for model layer sizes as another hyperparameter
+    models = []
+    val_scores, test_scores = [], []
+    for i in range(num_of_models):
+        print(f"Training model with hyperparameters {i}")
+        hp = generate_hyperparameters()
+        models.append(hp)
+        a, b = train_model(model, train, val, test, 
+                    device=device, train_opts=hp, show_plts=False, save_imgs=False)
+        val_scores.append(a)
+        test_scores.append(b.split("\n")[0])
+        print("-" * 30)
+    
+    best = val_scores.index(max(val_scores))
+    print(f"Hyperparameters resulting in the highest validation accuracy are {models[best]}")
+    print(f"Test accuracy of this model is: {test_scores[best]}")
+    return models[best]
+
 if __name__ == "__main__":
     # print(find_example(None))
     pass

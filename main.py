@@ -6,7 +6,7 @@ main.py
 from unicodedata import category
 import torch
 
-from utilities import train_model, get_param_sizes, generate_hyperparameters
+from utilities import train_model, get_param_sizes, generate_hyperparameters, find_best_parameters
 from model import DBPedia, HierarchicalRNN, BaselineMLP
 
 
@@ -89,19 +89,6 @@ if __name__ == "__main__":
     '''
     Toggle save_imgs to True to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
     '''
-    models = []
-    val_scores, test_scores = [], []
-    for i in range(2):
-        print(f"Training model with hyperparameters {i}")
-        hp = generate_hyperparameters()
-        models.append(hp)
-        a, b = train_model(model, train, val, test, 
-                    device=device, train_opts=hp, show_plts=False, save_imgs=False)
-        val_scores.append(a)
-        test_scores.append(b.split("\n")[0])
-        print("-" * 30)
-
-    best = val_scores.index(max(val_scores))
-    print(f"Hyperparameters resulting in the highest validation accuracy are {models[best]}")
-    print(f"Test accuracy of this model is: {test_scores[best]}")
-
+    hp = find_best_parameters(2, model, train, val, test, device)
+    # train_model(model, train, val, test, 
+    #     device=device, train_opts=hp, show_plts=False, save_imgs=False)
