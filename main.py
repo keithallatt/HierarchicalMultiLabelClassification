@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
 
     # how much data to load
-    train_obs= 10000
+    train_obs= 1000
     val_obs = 36003
     test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -84,14 +84,24 @@ if __name__ == "__main__":
         "optimizer" : "adam"
     }
 
-    hp = generate_hyperparameters()
-
     #param_sizes = get_param_sizes(model)
 
     '''
     Toggle save_imgs to True to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
     '''
-    train_model(model, train, val, test, 
-                device=device, train_opts=hp, show_plts=True, save_imgs=False)
+    models = []
+    val_scores, test_scores = [], []
+    for i in range(2):
+        print(f"Training model with hyperparameters {i}")
+        hp = generate_hyperparameters()
+        models.append(hp)
+        a, b = train_model(model, train, val, test, 
+                    device=device, train_opts=hp, show_plts=False, save_imgs=False)
+        val_scores.append(a)
+        test_scores.append(b.split("\n")[0])
+        print("-" * 30)
 
+    best = val_scores.index(max(val_scores))
+    print(f"Hyperparameters resulting in the highest validation accuracy are {models[best]}")
+    print(f"Test accuracy of this model is: {test_scores[best]}")
 

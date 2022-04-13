@@ -383,7 +383,7 @@ def gen_category_acc_plots(its_sub, train_accs, val_accs, save_imgs):
 
 
 def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x,
-                outfile="model.pickle", train_opts=None, device="cpu", show_category_stats=True, **kwargs):
+                outfile="model.pickle", train_opts=None, device="cpu", show_category_stats=True, show_plts=False, **kwargs):
 
     # can specify data_loader, by default, the identify function x -> x. Acts like a preprocessor.
     training_dataset = data_loader(train_data)
@@ -452,8 +452,8 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
             except ValueError:
                 print("Learning curve unavailable")
                 print(len(its_sub), len(train_accs[-1]), len(val_accs[-1]))
-
-    input("Showing plots. Type anything to continue.")
+    if show_plts:
+        input("Showing plots. Type anything to continue.")
 
     if train_accs:
         str_repr = "Final Training Accuracy Across All Categories: {}\n".format(train_accs[-1][-1]) + \
@@ -482,6 +482,8 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
             loss_fig.savefig(kwargs.get("loss_fig_out", "loss_curve.png"))
         if train_fig is not None:
             train_fig.savefig(kwargs.get("train_fig_out", "train_curve.png"))
+
+    return val_accs[-1][-1], str_repr_test_acc.split(" ")[5]
 
 
 def _tot_params_helper(model):
