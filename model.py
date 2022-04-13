@@ -1,17 +1,9 @@
-import os
-
-from datetime import datetime
-
 import torch
 import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
+import torch.nn.functional as F
+from torch.utils.data import Dataset
 
-import matplotlib.pyplot as plt
-
-from pathlib import Path
-
-from utilities import make_layer_mult_mlp, estimate_accuracy
+from utilities import make_layer_mult_mlp, to_one_hot
 
 
 class DBPedia(Dataset):
@@ -89,109 +81,30 @@ class HierarchicalRNN(nn.Module):
                 make_layer_mult_mlp(emb_size, fc_out_size, clf_size_mults)
             )
 
-    def forward(self, doc_emb: torch.tensor):
+    def forward(self, doc_emb: torch.tensor, true_labs=None):
+
+        if true_labs is not None:
+            assert true_labs.shape[1] == len(self.embedding_fcs)
 
         in_data = doc_emb
         last_hidden = None
         preds = list()
-        for emb_fc, clf_fc in zip(self.embedding_fcs, self.classifier_fcs):
-
-            emb = emb_fc(in_data)
+        for i in range(len(self.output_sizes)):
+            emb = self.embedding_fcs[i](in_data)
             # add sequence length dimension
             emb = torch.unsqueeze(emb, dim=0)
             out, hid = self.rnn(emb, last_hidden)
             # remove sequence length dimension
-            clf = clf_fc(out)
+            clf = self.classifier_fcs[i](out)
             clf = torch.squeeze(clf, dim=0)
 
             preds.append(clf)
-            in_data = clf
+            in_data = torch.argmax(clf, axis=1) if true_labs is None \
+                      else true_labs[:,i]
+            in_data = to_one_hot(in_data, d=self.output_sizes[i], device=clf.get_device())
             last_hidden = hid
 
         return preds
-
-
-
-
-
-
-
-def train(model, train_data, valid_data, batch_size=32, num_epochs=7,
-          weight_decay=0.0, learning_rate=0.01, momentum=0,
-          device="cpu", checkpoint_path="checkpoints"):
-
-    train_loader = DataLoader(
-        train_data, batch_size=batch_size, shuffle=True
-    )
-
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(model.parameters(),
-                          lr=learning_rate,
-                          momentum=momentum,
-                          weight_decay=weight_decay)
-
-    loss_log = {
-        "iter": [],
-        "loss": []
-    }
-
-    acc_log = {
-        "epoch": [],
-        "train_acc": [],
-        "valid_acc": []
-    }
-
-    start_time = datetime.now().strftime("%H%M%S")
-    if checkpoint_path is not None and not os.path.exists(checkpoint_path):
-        os.mkdir(checkpoint_path)
-
-    it = 0
-    for epoch in range(num_epochs):
-
-        for doc_embs, labels in train_loader:
-
-            it += len(labels)
-
-            doc_embs, labels = doc_embs.to(device), labels.to(device)
-            preds = model(doc_embs)
-            loss = torch.sum((criterion(pred, label)
-                              for pred, label in zip(preds, labels)))
-            doc_embs.detach(), labels.detach()
-
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-
-            loss_log["iter"].append(it)
-            loss_log["loss"].append(loss.item())
-
-        train_acc = estimate_accuracy(model, train_data)
-        valid_acc = estimate_accuracy(model, valid_data)
-
-        print(f"Epoch: {epoch} | "
-              f"Train Acc: {train_acc} | "
-              f"Val Acc: {valid_acc}")
-
-        acc_log["epoch"].append(epoch)
-        acc_log["train_acc"].append(train_acc)
-        acc_log["valid_acc"].append(valid_acc)
-
-        if checkpoint_path is not None:
-            torch.save(model.state_dict(),
-                       checkpoint_path + f"model_{start_time}_{epoch}")
-
-    _, axs = plt.subplots(nrows=2, ncols=1, figsize=(10,10))
-
-    axs[0].plot("iter", "loss", data=loss_log)
-    axs[0].set_xlabel("Iteration")
-    axs[0].set_ylabel("Loss")
-
-    axs[1].plot("epoch", "train_acc", data=acc_log,
-                label="Train Accuracy")
-    axs[1].plot("epoch", "valid_acc", data=acc_log,
-                label="Validation Accuracy")
-    axs[1].set_xlabel("Epoch")
-    axs[1].set_ylabel("Accuracy")
 
 
 if __name__ == "__main__":
