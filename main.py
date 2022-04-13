@@ -7,7 +7,7 @@ from unicodedata import category
 import torch
 
 from utilities import train_model, get_param_sizes
-from model import DBPedia, HierarchicalRNN
+from model import DBPedia, HierarchicalRNN, BaselineMLP
 
 
 
@@ -21,9 +21,9 @@ if __name__ == "__main__":
 
 
     # how much data to load
-    train_obs= 1000
-    val_obs = 1000
-    test_obs = 1000
+    train_obs= 10000
+    val_obs = 36003
+    test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     print("Using device {}".format(device))
@@ -51,9 +51,16 @@ if __name__ == "__main__":
                     file_fmt.format(split="test", var="labels"),
                     obs=test_obs)
 
+    
+    # uncomment model to use
+
     model = HierarchicalRNN(
         input_size=768, emb_size=100, output_sizes=(9, 70, 219)
     ).to(device)
+
+    # model = BaselineMLP(
+    #     input_size=768, output_sizes=(9, 70, 219)
+    # ).to(device)
 
     '''
     Model Checkpointing Notes
@@ -79,7 +86,7 @@ if __name__ == "__main__":
 
 
 
-    param_sizes = get_param_sizes(model)
+    #param_sizes = get_param_sizes(model)
 
     '''
     Toggle save_imgs to True to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
