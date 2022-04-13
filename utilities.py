@@ -189,7 +189,7 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
 # MODEL TRAINING FUNCTIONS @ KEITH.ALLATT, RENATO.ZIMMERMANN
 def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num_epochs=7,
           calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0,
-          device="cpu", checkpoint_path=None):
+          device="cpu", checkpoint_path=None, load_checkpoint=False, load_checkpoint_path=None):
     """
     Train a model.
     """
@@ -198,6 +198,10 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
     if hasattr(model, "train_lock"):
         if model.train_lock:
             print("Model is locked. Please unlock the model to train.")
+
+    if load_checkpoint and load_checkpoint_path: # load_checkpoint path is path to checkpointed model parameters
+        print("checkpointed model loaded!")
+        model.load_state_dict(torch.load(load_checkpoint_path, map_location=torch.device(device)))
 
     check_prefix = datetime.now().strftime("%H%M%S")
     if checkpoint_path is not None and not os.path.exists(checkpoint_path):
@@ -364,6 +368,8 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
 
     if train_opts is None:
         train_opts = dict()
+
+
     its, its_sub, losses, train_accs, val_accs = train(model, training_dataset, validation_dataset,
                                                      device=device, **train_opts)
 

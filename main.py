@@ -22,7 +22,7 @@ if __name__ == "__main__":
 
 
     obs = 4000 # set this to some lower number when testing
-    train_obs= 3000
+    train_obs= 1000
     val_obs = 1000
     test_obs = 1000
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -56,7 +56,10 @@ if __name__ == "__main__":
 
     train_opts = {
         "calc_acc_every": 5,
-        "num_epochs": 7,
+        "num_epochs": 1,
+        "checkpoint_path" : "./checkpoint/",
+        "load_checkpoint" : True,
+        "load_checkpoint_path": "./checkpoint/model_233939_0"
     }
 
     
