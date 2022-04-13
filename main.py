@@ -81,7 +81,7 @@ if __name__ == "__main__":
         "checkpoint_path" : False, 
         "load_checkpoint" : False,
         "load_checkpoint_path" : False,
-        "optimizer" : "adam"
+        "optimizer" : "adam",
         "tf_init": 0, 
         "tf_decay": 0.5
     }
