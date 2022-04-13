@@ -58,9 +58,8 @@ if __name__ == "__main__":
 
     train_opts = {
         "calc_acc_every": 4,
-        "num_epochs": 1,
+        "num_epochs": 5,
         "checkpoint_path" : "./checkpoint/",
-       
     }
 
     '''
@@ -74,3 +73,13 @@ if __name__ == "__main__":
 
     train_model(model, train, val, test, 
                 device=device, train_opts=train_opts, show_plts=True, save_imgs=True)
+
+
+'''
+20 epochs
+obs = 4000 # set this to some lower number when testing
+train_obs= 40000
+val_obs = 36003
+test_obs = 60794
+
+'''

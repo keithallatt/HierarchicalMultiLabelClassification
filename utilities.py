@@ -29,7 +29,7 @@ import numpy as np
 # number of labels used in multi-label classification
 NUM_LABELS = 3 # l1,l2,l3
 
-img_dir = "./imgs/" + datetime.now().strftime("%H%M%S") + "/"
+img_dir = "./imgs/" + datetime.now().strftime("%d-%m-%Y %H:%M:%S") + "/"
 
 
 def make_progressbar(length: int, progress: float, naive: bool = False, time_start: float = None) -> str:
@@ -206,8 +206,11 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
         print("checkpointed model loaded!")
         model.load_state_dict(torch.load(load_checkpoint_path, map_location=torch.device(device)))
 
-    check_prefix = datetime.now().strftime("%H%M%S")
-    if checkpoint_path is not None and not os.path.exists(checkpoint_path):
+    check_prefix = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
+    checkpoint_path += check_prefix + "/"
+    #check_prefix = datetime.now().strftime()
+   
+    if not os.path.exists(checkpoint_path): # directory to store checkpointed model
         os.mkdir(checkpoint_path)
 
     tot_train = len(train_data)
@@ -301,6 +304,10 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
             if done:
                 break
+
+        if checkpoint_path is not None:
+                torch.save(model.state_dict(),
+                            checkpoint_path + f"model_{check_prefix}_{epoch}")
 
     
     except KeyboardInterrupt:
