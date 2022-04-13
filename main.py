@@ -6,7 +6,7 @@ main.py
 from unicodedata import category
 import torch
 
-from utilities import train_model, get_param_sizes
+from utilities import train_model, get_param_sizes, generate_hyperparameters
 from model import DBPedia, HierarchicalRNN, BaselineMLP
 
 
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         "optimizer" : "adam"
     }
 
-
+    hp = generate_hyperparameters()
 
     #param_sizes = get_param_sizes(model)
 
@@ -92,6 +92,6 @@ if __name__ == "__main__":
     Toggle save_imgs to True to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
     '''
     train_model(model, train, val, test, 
-                device=device, train_opts=train_opts, show_plts=True, save_imgs=False)
+                device=device, train_opts=hp, show_plts=True, save_imgs=False)
 
 

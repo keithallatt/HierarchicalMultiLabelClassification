@@ -533,6 +533,25 @@ def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"
         if is_example:
             return summary, label_emb, output
 
+def generate_hyperparameters():
+    from scipy.stats import truncnorm as tn
+    """ Using random search, generate values for hyperparameters
+    based on a Gaussian distribution. 
+    """
+    hp = {"calc_acc_every":4}
+    parameters = ["batch_size", "learning_rate", "weight_decay", "momentum", "num_epochs"]
+    max_value = [128, 0.1, 0.3, 0.9, 14]
+
+    for i in range(len(parameters)):
+        value = tn(a=0.001, b=max_value[i], scale=max_value[i]).rvs(size=1)
+        print(f"parameter: {parameters[i]}, value: {value[0]}")
+        hp[parameters[i]] = value[0]
+
+    hp["batch_size"] = int(hp["batch_size"])
+    hp["num_epochs"] = max(7, int(hp["num_epochs"]))
+    print("-" * 30)
+    return hp
+
 if __name__ == "__main__":
     # print(find_example(None))
     pass
