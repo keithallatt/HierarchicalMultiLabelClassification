@@ -29,6 +29,7 @@ import numpy as np
 # number of labels used in multi-label classification
 NUM_LABELS = 3 # l1,l2,l3
 
+# new directory to store learning curve and loss images 
 img_dir = "./imgs/" + datetime.now().strftime("%d-%m-%Y %H:%M:%S") + "/"
 
 
@@ -189,10 +190,10 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
 
 
 # MODEL TRAINING FUNCTIONS @ KEITH.ALLATT, RENATO.ZIMMERMANN
-def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num_epochs=7,
-          calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0,
+def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, weight_decay=0.0, momentum=0.9, 
+          num_epochs=7, calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0,
           device="cpu", checkpoint_path=None, load_checkpoint=False, load_checkpoint_path=None,
-          checkpoint_frequency=4):
+          checkpoint_frequency=4, optimizer="adam"):
     """
     Train a model.
     """
@@ -207,18 +208,30 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
         model.load_state_dict(torch.load(load_checkpoint_path, map_location=torch.device(device)))
 
     check_prefix = datetime.now().strftime("%d-%m-%Y %H:%M:%S")
-    checkpoint_path += check_prefix + "/"
-    #check_prefix = datetime.now().strftime()
-   
-    if not os.path.exists(checkpoint_path): # directory to store checkpointed model
-        os.mkdir(checkpoint_path)
+    if checkpoint_path:
+        if not os.path.exists(checkpoint_path): # directory to store checkpointed model
+            os.mkdir(checkpoint_path)
+        checkpoint_path += check_prefix + "/"
+        #check_prefix = datetime.now().strftime()
+        if not os.path.exists(checkpoint_path): # directory to store checkpointed model
+            os.mkdir(checkpoint_path)
 
     tot_train = len(train_data)
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
 
     # TODO: be able to chooose loss / optimizer with keyword arguments
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    assert optimizer in ("sgd", "adam")
+    print("Using optimizer: {}".format(optimizer))
+    if optimizer == "sgd":
+        optimizer = optim.SGD(model.parameters(),
+                              lr=learning_rate,
+                              momentum=momentum,
+                              weight_decay=weight_decay)
+    else:
+        optimizer = optim.Adam(model.parameters(),
+                               lr=learning_rate,
+                               weight_decay=weight_decay)
 
     its, its_sub = [], []
   

@@ -11,7 +11,6 @@ from model import DBPedia, HierarchicalRNN
 
 
 
-
 if __name__ == "__main__":
 
   
@@ -56,18 +55,29 @@ if __name__ == "__main__":
         input_size=768, emb_size=100, output_sizes=(9, 70, 219)
     ).to(device)
 
+    '''
+    Model Checkpointing Notes
+    
+    For checkpointing/saving a model, set checkpoint_path to the directory for model checkpoint to be saved i.e. ./checkpoint/
+
+    To load a checkpointed model and train on it set: load_checkpoint: True and 
+    load_checkpoint_path = <path-to-checkpointed-model> ex. "./checkpoint/model_233939_0"
+
+    You can also set the checkpoint frequency by setting checkpoint_frequency = <x epochs>
+    By default it is set to 4 epochs.
+
+    Model checkpoints will be saved in a directory within your checkpoint path
+    '''
     train_opts = {
         "calc_acc_every": 4,
         "num_epochs": 5,
-        "checkpoint_path" : "./checkpoint/",
+        "checkpoint_path" : "./new_checkpoint/",
+        "load_checkpoint" : False,
+        "load_checkpoint_path" : False,
+        "optimizer" : "adam"
     }
 
-    '''
-     "load_checkpoint" : True,
-     "load_checkpoint_path": "./checkpoint/model_233939_0"
-    '''
 
-    
 
     param_sizes = get_param_sizes(model)
 
