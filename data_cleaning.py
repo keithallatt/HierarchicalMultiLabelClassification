@@ -25,6 +25,10 @@ validation_data = Path("./dbpedia_data/DBPEDIA_val.csv")
 testing_data = Path("./dbpedia_data/DBPEDIA_test.csv")
 
 
+training_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l1.csv")
+validation_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l2.csv")
+testing_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l3.csv")
+
 class WordIdMapping:
     def __init__(self, n_levels):
         self.n_levels = n_levels
@@ -143,9 +147,10 @@ def process_documents(data_files,
             emb_list.append(emb.squeeze())
             lab_list.append(torch.tensor(lab_ids))
 
-        torch.save(torch.stack(emb_list), file_name.stem+emb_suffix)
-        torch.save(torch.stack(lab_list), file_name.stem+lab_suffix)
+        torch.save(torch.stack(emb_list), "processed_data/" + file_name.stem+emb_suffix)
+        torch.save(torch.stack(lab_list), "processed_data/" + file_name.stem+lab_suffix)
 
+    # "processed_data/" + 
     with open(map_file, "wb") as f:
         pickle.dump(map_data, f)
 
@@ -183,9 +188,15 @@ def csv_pt_pairs(dataset, assert_tests=False):
 
 
 if __name__ == '__main__':
-    csv_pt_pairs("test", assert_tests=True)
+    # csv_pt_pairs("test", assert_tests=True)
+    process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
+                      for name in ["train_small_l1"]])
 
     # process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
-    #                    for name in ["train", "val", "test"]])
+    #                    for name in ["l2_l1_Agent_dep"]])
+    #process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
+    #                   for name in ["train", "val", "test"]])
+
+    
     # for d, ls in g:
     #     print(d[:min(len(d), 100)], ls)

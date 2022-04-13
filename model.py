@@ -21,6 +21,39 @@ class DBPedia(Dataset):
         return self.embs[idx], self.labs[idx]
 
 
+
+class BaselineMLP(nn.Module):
+
+    def __init__(self, input_size: int, output_sizes: tuple,
+                 clf_size_mults: tuple = (1,)):
+
+        super(BaselineMLP, self).__init__()
+
+        self.output_sizes = output_sizes
+        self.classifier_fcs = nn.ModuleList()
+
+        for fc_out_size in output_sizes:
+            self.classifier_fcs.append(
+                make_layer_mult_mlp(input_size, fc_out_size, clf_size_mults)
+            )
+
+    def forward(self, doc_emb: torch.tensor):
+
+        in_data = doc_emb
+        preds = list()
+        for clf_fc in self.classifier_fcs:
+
+            clf = clf_fc(in_data)
+            clf = torch.squeeze(clf, dim=0)
+
+            preds.append(clf)
+           
+
+        return preds
+
+
+
+
 class HierarchicalRNN(nn.Module):
 
     def __init__(self, input_size: int, emb_size: int, output_sizes: tuple,
@@ -79,9 +112,15 @@ if __name__ == "__main__":
     import numpy as np
     from transformers import BertTokenizer, BertModel
 
-    pred_model = HierarchicalRNN(
-        input_size=768, emb_size=100, output_sizes=(9, 70, 219)
-    )
+    # pred_model = HierarchicalRNN(
+    #     input_size=768, emb_size=100, output_sizes=(9, 70, 219)
+    # )
+
+    #print(pred_model)
+
+    baseline_model = BaselineMLP(input_size=768, output_sizes=(9, 70, 219))
+
+    print(baseline_model)
 
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     emb_model = BertModel.from_pretrained("bert-base-uncased")
@@ -98,13 +137,17 @@ if __name__ == "__main__":
 
     doc = tokenizer(raw_docs, return_tensors='pt', padding=True)
     doc_emb = emb_model(**doc).pooler_output
+    print(doc_emb.shape)
 
-    preds = pred_model(doc_emb)
+    # preds = pred_model(doc_emb)
 
-    for raw in raw_docs:
-        raw_sents = raw.split('. ')
-        sent = tokenizer(raw_sents, return_tensors='pt', padding=True)
-        sent_emb = emb_model(**sent).pooler_output
-        preds = pred_model(sent_emb)
+    baseline_preds = baseline_model(doc_emb)
+    #print(baseline_preds[2].shape)
+
+    # for raw in raw_docs:
+    #     raw_sents = raw.split('. ')
+    #     sent = tokenizer(raw_sents, return_tensors='pt', padding=True)
+    #     sent_emb = emb_model(**sent).pooler_output
+    #     preds = pred_model(sent_emb)
 
     print("DONE")
