@@ -219,10 +219,9 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
     tot_train = len(train_data)
     train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=shuffle)
 
-    # TODO: be able to chooose loss / optimizer with keyword arguments
+    # choose loss function + optimizer
     criterion = nn.CrossEntropyLoss()
     assert optimizer in ("sgd", "adam")
-    print("Using optimizer: {}".format(optimizer))
     if optimizer == "sgd":
         optimizer = optim.SGD(model.parameters(),
                               lr=learning_rate,
@@ -313,14 +312,15 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
 
             if checkpoint_path is not None and epoch % checkpoint_frequency == 0:
                 torch.save(model.state_dict(),
-                            checkpoint_path + f"model_{check_prefix}_{epoch}")
+                            checkpoint_path + f"model_{check_prefix}_{epoch+1}")
 
             if done:
                 break
 
+        # save model params after last epoch
         if checkpoint_path is not None:
                 torch.save(model.state_dict(),
-                            checkpoint_path + f"model_{check_prefix}_{epoch}")
+                            checkpoint_path + f"model_{check_prefix}_{epoch+1}")
 
     
     except KeyboardInterrupt:
@@ -333,16 +333,12 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
 
     # what is this for?
     if not train_accs:
-        assert(1 == 0)
         train_accs = get_accuracy(model, train_data)
     if not losses:
-        assert(1 == 0)
         losses = [float(loss_sum) / batch_size]
     if not val_accs:
-        assert(1 == 0)
         val_accs = get_accuracy(model, valid_data, device=device)
     if not its_sub:
-        assert(1 == 0)
         its_sub = [n_batch]
 
     print()
