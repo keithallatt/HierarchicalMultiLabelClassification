@@ -29,6 +29,8 @@ import numpy as np
 # number of labels used in multi-label classification
 NUM_LABELS = 3 # l1,l2,l3
 
+img_dir = "./imgs/" + datetime.now().strftime("%H%M%S") + "/"
+
 
 def make_progressbar(length: int, progress: float, naive: bool = False, time_start: float = None) -> str:
     """
@@ -333,7 +335,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
 
 
 
-def gen_category_loss_plots(its, losses):
+def gen_category_loss_plots(its, losses, save_imgs):
     '''
     generate l1,l2,l3 loss curves
     '''
@@ -343,9 +345,11 @@ def gen_category_loss_plots(its, losses):
         ax.plot(its, losses[i], label="Train")
         ax.set_xlabel("Iterations")
         ax.set_ylabel("Loss")
+        if save_imgs:
+            loss_fig.savefig(img_dir + f"l{i+1}_loss.png")
         loss_fig.show()
 
-def gen_category_acc_plots(its_sub, train_accs, val_accs):
+def gen_category_acc_plots(its_sub, train_accs, val_accs, save_imgs):
     '''
     generate l1,l2,l3 accuracy/learning curves
     '''
@@ -357,6 +361,8 @@ def gen_category_acc_plots(its_sub, train_accs, val_accs):
         ax.set_xlabel("Iterations")
         ax.set_ylabel("Training Accuracy")
         ax.legend(loc='best')
+        if save_imgs:
+            train_fig.savefig(img_dir + f"l{i+1}_acc.png")
         train_fig.show()
 
 
@@ -377,6 +383,13 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
 
     show = kwargs.get("show_plts", False)
     ask = kwargs.get("ask", False)
+    save_imgs = kwargs.get("save_imgs", False)
+
+    if save_imgs:
+        if not os.path.exists(img_dir):
+            os.makedirs(img_dir)
+    # with open(outfile, 'wb') as file:
+    #     pickle.dump(obj, file)
 
     
     loss_fig, train_fig = None, None
@@ -388,10 +401,14 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
                 ax.plot(its, losses[-1], label="Train")
                 ax.set_xlabel("Iterations")
                 ax.set_ylabel("Loss")
+
+                if save_imgs:
+                    loss_fig.savefig(img_dir + "total_loss.png")
+                        
                 loss_fig.show()
 
                 if show_category_stats:
-                    gen_category_loss_plots(its, losses)
+                    gen_category_loss_plots(its, losses, save_imgs)
                     
             except ValueError:
                 print("Loss curve unavailable")
@@ -408,10 +425,14 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
                 ax.set_xlabel("Iterations")
                 ax.set_ylabel("Training Accuracy")
                 ax.legend(loc='best')
+
+                if save_imgs:
+                    train_fig.savefig(img_dir + "total_accuracy.png")
+
                 train_fig.show()
 
                 if show_category_stats:
-                    gen_category_acc_plots(its_sub, train_accs, val_accs)
+                    gen_category_acc_plots(its_sub, train_accs, val_accs, save_imgs)
             except ValueError:
                 print("Learning curve unavailable")
                 print(len(its_sub), len(train_accs[-1]), len(val_accs[-1]))
@@ -432,13 +453,15 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
                     "Final L2 Validation Accuracy: {}\n".format(val_accs[1][-1]) + \
                     "Final L3 Validation Accuracy: {}".format(val_accs[2][-1])  
          print(str_repr)
+
+
     if test_data is not None:
         print("-" * 30)
         str_repr_test_acc = get_accuracy(model, testing_dataset, str_repr=True, device=device)
         print("Final Test Accuracy: {}".format(str_repr_test_acc))
 
     if ask and input("Save to file? [y/n] > ").lower().strip() == "y":
-        dump_data(outfile, model)
+        #dump_data(outfile, model)
         if loss_fig is not None:
             loss_fig.savefig(kwargs.get("loss_fig_out", "loss_curve.png"))
         if train_fig is not None:

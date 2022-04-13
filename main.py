@@ -22,9 +22,9 @@ if __name__ == "__main__":
 
 
     obs = 4000 # set this to some lower number when testing
-    train_obs= 15000
-    val_obs = 20000
-    test_obs = 20000
+    train_obs= 1000
+    val_obs = 1000
+    test_obs = 1000
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     print("Using device {}".format(device))
@@ -58,7 +58,7 @@ if __name__ == "__main__":
 
     train_opts = {
         "calc_acc_every": 4,
-        "num_epochs": 12,
+        "num_epochs": 1,
         "checkpoint_path" : "./checkpoint/",
        
     }
@@ -72,5 +72,5 @@ if __name__ == "__main__":
 
     param_sizes = get_param_sizes(model)
 
-    train_model(model, train, val, test, show_plts=True,
-                device=device, train_opts=train_opts)
+    train_model(model, train, val, test, 
+                device=device, train_opts=train_opts, show_plts=True, save_imgs=True)
