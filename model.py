@@ -68,7 +68,7 @@ class HierarchicalRNN(nn.Module):
             preds.append(clf)
             in_data = torch.argmax(clf, axis=1) if true_labs is None \
                       else true_labs[:,i]
-            in_data = to_one_hot(in_data, d=self.output_sizes[i])
+            in_data = to_one_hot(in_data, d=self.output_sizes[i], device=clf.get_device())
             last_hidden = hid
 
         return preds
