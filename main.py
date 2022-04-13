@@ -22,10 +22,12 @@ if __name__ == "__main__":
 
 
     obs = 4000 # set this to some lower number when testing
-    train_obs= 1000
-    val_obs = 1000
-    test_obs = 1000
+    train_obs= 15000
+    val_obs = 20000
+    test_obs = 20000
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+    print("Using device {}".format(device))
 
     # Uncomment train based on what training set you want to use
 
@@ -55,12 +57,16 @@ if __name__ == "__main__":
     ).to(device)
 
     train_opts = {
-        "calc_acc_every": 5,
-        "num_epochs": 1,
+        "calc_acc_every": 4,
+        "num_epochs": 12,
         "checkpoint_path" : "./checkpoint/",
-        "load_checkpoint" : True,
-        "load_checkpoint_path": "./checkpoint/model_233939_0"
+       
     }
+
+    '''
+     "load_checkpoint" : True,
+     "load_checkpoint_path": "./checkpoint/model_233939_0"
+    '''
 
     
 

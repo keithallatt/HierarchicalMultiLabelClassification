@@ -189,7 +189,8 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
 # MODEL TRAINING FUNCTIONS @ KEITH.ALLATT, RENATO.ZIMMERMANN
 def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num_epochs=7,
           calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0,
-          device="cpu", checkpoint_path=None, load_checkpoint=False, load_checkpoint_path=None):
+          device="cpu", checkpoint_path=None, load_checkpoint=False, load_checkpoint_path=None,
+          checkpoint_frequency=4):
     """
     Train a model.
     """
@@ -291,12 +292,13 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, num
                     va_progress = make_progressbar(8, estimate_accuracy(model, valid_data, device=device))
                     print(f"\r{it_progress} [TA:{ta_progress}] [VA:{va_progress}] ", end='')
 
+
+            if checkpoint_path is not None and epoch % checkpoint_frequency == 0:
+                torch.save(model.state_dict(),
+                            checkpoint_path + f"model_{check_prefix}_{epoch}")
+
             if done:
                 break
-
-        if checkpoint_path is not None:
-            torch.save(model.state_dict(),
-                        checkpoint_path + f"model_{check_prefix}_{epoch}")
 
     
     except KeyboardInterrupt:
