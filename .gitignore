@@ -4,3 +4,5 @@
 **/__pycache__
 dbpedia_data/*
 processed_data/*
+checkpoint/*
+imgs/*
