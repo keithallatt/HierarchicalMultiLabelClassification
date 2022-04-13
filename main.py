@@ -20,7 +20,7 @@ if __name__ == "__main__":
     l2_l1_file_fmt = "processed_data/DBPEDIA_l2_l1_Agent_{var}.pt"
 
 
-    obs = 4000 # set this to some lower number when testing
+    # how much data to load
     train_obs= 1000
     val_obs = 1000
     test_obs = 1000
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     train_opts = {
         "calc_acc_every": 4,
         "num_epochs": 7,
-        "checkpoint_path" : "./new_checkpoint2/",
+        "checkpoint_path" : False, 
         "load_checkpoint" : False,
         "load_checkpoint_path" : False,
         "optimizer" : "adam"
@@ -82,17 +82,9 @@ if __name__ == "__main__":
     param_sizes = get_param_sizes(model)
 
     '''
-    Toggle save_imgs to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
+    Toggle save_imgs to True to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
     '''
     train_model(model, train, val, test, 
                 device=device, train_opts=train_opts, show_plts=True, save_imgs=False)
 
 
-'''
-20 epochs
-obs = 4000 # set this to some lower number when testing
-train_obs= 40000
-val_obs = 36003
-test_obs = 60794
-
-'''

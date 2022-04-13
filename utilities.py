@@ -310,7 +310,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
                     print(f"\r{it_progress} [TA:{ta_progress}] [VA:{va_progress}] ", end='')
 
 
-            if checkpoint_path is not None and epoch % checkpoint_frequency == 0:
+            if checkpoint_path and epoch % checkpoint_frequency == 0:
                 torch.save(model.state_dict(),
                             checkpoint_path + f"model_{check_prefix}_{epoch+1}")
 
@@ -318,7 +318,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
                 break
 
         # save model params after last epoch
-        if checkpoint_path is not None:
+        if checkpoint_path:
                 torch.save(model.state_dict(),
                             checkpoint_path + f"model_{check_prefix}_{epoch+1}")
 
