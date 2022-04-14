@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
 
     # how much data to load
-    train_obs= 1000
+    train_obs= 40000
     val_obs = 36003
     test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -89,6 +89,6 @@ if __name__ == "__main__":
     '''
     Toggle save_imgs to True to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
     '''
-    hp = find_best_parameters(2, model, train, val, test, device)
+    hp = find_best_parameters(5, model, train, val, test, device)
     # train_model(model, train, val, test, 
     #     device=device, train_opts=hp, show_plts=False, save_imgs=False)

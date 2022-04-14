@@ -537,20 +537,26 @@ def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"
 
 def generate_hyperparameters():
     from scipy.stats import truncnorm as tn
+    from scipy.stats import randint as sp_randint
     """ Using random search, generate values for hyperparameters
     based on a Gaussian distribution. 
     """
     hp = {"calc_acc_every":4}
-    parameters = ["batch_size", "learning_rate", "weight_decay", "momentum", "num_epochs"]
-    max_value = [128, 0.1, 0.3, 0.9, 14]
+    parameters = {"batch_size": [64, 128],
+                  "learning_rate": (0.001, 0.01),
+                  "weight_decay": (0.001, 0.1),
+                  "momentum": (0.5, 0.9),
+                  "num_epochs": (7, 14)}
 
-    for i in range(len(parameters)):
-        value = tn(a=0.001, b=max_value[i], scale=max_value[i]).rvs(size=1)
-        print(f"parameter: {parameters[i]}, value: {value[0]}")
-        hp[parameters[i]] = value[0]
-
+    for p in parameters:
+        if p == "batch_size" or p == "num_epochs":
+            value = sp_randint(parameters[p][0], parameters[p][1]).rvs(size=1)
+        else:
+            value = tn(a=parameters[p][0], b=parameters[p][1], scale=1).rvs(size=1)
+        print(f"parameter: {p}, value: {value[0]}")
+        hp[p] = value[0]
+    
     hp["batch_size"] = int(hp["batch_size"])
-    hp["num_epochs"] = max(7, int(hp["num_epochs"]))
     print("-" * 30)
     return hp
 
