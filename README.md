@@ -1,4 +1,4 @@
-# CSC413H5 Final Project
+# CSC413H5 Final Project - Multi-Label Classification on DBPedia
 
 ## Introduction
 
@@ -45,7 +45,7 @@ Our encoder model takes in a single article, x as input. The article must go thr
 
 #### Decoder
 
-The decoder portion of our model takes in the encoded article of shape 1x768. It consists of three layers: One for predicting L1, L2 and L3 labels respectively. Each Layer i begins with an MLP which we call the *embedding MLP*. MLP1 takes the encoded article as input. MLP2 and MLP3 take in *either* the output of the previous layer (i.e. y1 or y2) with probability p or the true labels of the previous layer (i.e. t1 or t2) with probability 1-p. This implements *teacher forcing* since we feed the ground truth labels of Layer i to Layer i+1. Each embedding MLP outputs a vector of shape 1x100 which gets fed into a GRU. The number of hidden states in the GRU is a hyperparameter which is set to 100 by default. The GRU aims to remember sequential information between the layers. This is important since the L1, L2 and L3 labels have dependencies between them. For instance, Place ∈ L1, Building ∈ L2 and HistoricalBuilding ∈ L3. The L3 labels are a specific type of L2 label which are in turn a specific type of L1 label. Thus, for example, when predicting an L2 label, we would like to remember the information in our prediction of the L1 label to aid in our L2 prediction. To accomplish this, the inputs to GRUi is the output of GRUi-1 and the output of MLPi with the exception of GRU1 which takes in just the output of MLP1 since it is the first layer. The output of each GRU is a 1x100 vector which gets fed into a *classifer MLP*: CLFi. This outputs a vector of class scores: yi for Layer i and gets fed into the embedding MLP in the next layer. Thus, y1, y2 and y3 have shapes: 1x9, 1x70 and 1x219 respectively which are the number of labels in L1, L2 and L3. Lastly, we compute the cross entropy loss: Lce by averaging the L1,L2 and L3 cross entropies.
+The decoder portion of our model takes in the encoded article of shape 1x768. It consists of three layers: One for predicting L1, L2 and L3 labels respectively. Each Layer i begins with an MLP which we call the *embedding MLP*. MLP1 takes the encoded article as input. MLP2 and MLP3 take in *either* the output of the previous layer (i.e. y1 or y2) with probability p or the true labels of the previous layer (i.e. t1 or t2) with probability 1-p. This implements *teacher forcing* since we feed the ground truth labels of Layer i to Layer i+1. Each embedding MLP contains several layers with a ReLU activation function applied between each layer. It outputs a vector of shape 1x100 which then gets fed into a GRU. The number of hidden states in the GRU is a hyperparameter which is set to 100 by default. The GRU aims to remember sequential information between the layers. This is important since the L1, L2 and L3 labels have dependencies between them. For instance, Place ∈ L1, Building ∈ L2 and HistoricalBuilding ∈ L3. The L3 labels are a specific type of L2 label which are in turn a specific type of L1 label. Thus, for example, when predicting an L2 label, we would like to remember the information in our prediction of the L1 label to aid in our L2 prediction. To accomplish this, the inputs to GRUi is the output of GRUi-1 and the output of MLPi with the exception of GRU1 which takes in just the output of MLP1 since it is the first layer. The output of each GRU is a 1x100 vector which gets fed into a *classifer MLP*: CLFi. Similar to the embedding MLP, the classifier MLP contains several layers with ReLU applied between each layer. However, it outputs a vector of class scores: yi for Layer i and gets fed into the embedding MLP in the next layer. Thus, y1, y2 and y3 have shapes: 1x9, 1x70 and 1x219 respectively which are the number of labels in L1, L2 and L3. Lastly, we compute the cross entropy loss: Lce by averaging the L1,L2 and L3 cross entropies.
 
 
 <!-- ### Decoder
@@ -84,8 +84,20 @@ which are further tuned as part of our application. -->
 The pre-trained `bert-base-uncased` model which we use as our encoder, contains 110 million parameters [2]. 
 
 
+### Understanding the Shapes of the Decoder
+To count the number of parameters in the decoder portion of our model we must consider the embedding and classifier
+MLPs at each layer as well as the GRUs. The number of layers in each MLP and the output shape of the embedding MLPs is a hyperparameter. In our model, this is
+configured by specifying three parameters: embedding_size and [emb|clf]_size_mults. The former specifies the output shape of the embedding MLP. The latter is an n-tuple which defines the number of layers in the embedding/classifier MLPs and the number of hidden units in the current MLP layer as a multiple of the hidden units in the previous MLP layer. Note that the output shape of the classifier MLPs are fixed since they represent the un-normalized class scores for the L1,L2,L3 labels respectively. To illustrate, suppose embedding_size=100 and emb_size_mults = (1,2,3). The input/output shapes of MLP1 from the diagram looks like: (in_features=768, out_features=768) -> (in_features=768, out_features=1536) -> (in_features=1536, out_features=4608) -> (in_features=4608, out_features=100). The input/output shapes of MLP2 looks like:  (in_features=9, out_features=9) -> (in_features=9, out_features=18) -> (in_features=18, out_features=54) -> (in_features=54, out_features=100). Notice that the input to MLP1 is a 1x768 vector which represents the encoded article. The input to MLP2 is a 1x9 vector which represents the output of Layer 1. Also notice that the output features/number of hidden units in each layer is determined by the emb_multiplier: (1,2,3). Both MLPs output a 1x100 vector as determined by embedding_size=100. This is useful since the inputs to the GRU at each layer must be the same shape. 
 
-*To be filled in*
+The input/output of the classifier MLPs are determined in a similar fashion. clf_multiplier is used instead of emb_multiplier to define the number of layers and hidden units in the classifier MLPs. The outputs of CLF1, CLF2 and CLF3 are 1x9, 1x70 and 1x219 respectively which represent the un-normalized class scores for L1, L2 and L3 respectively. 
+
+Lastly, 
+
+
+
+
+
+
 
 
 
@@ -122,6 +134,8 @@ Next, the maximum token length that BERT supports is 512. To accomodate this, we
 
 Lastly, recall that a data point looks something like: (article, L1, L2, L3) where article is the model input and (L1,L2,L3) are the ground truth labels. Each parameter is a string. Articles are converted to tokens which are then mapped to integers. This is handled by the BERT Tokenizer. However, we must manually map the ground truth labels to integers since this is not handled by BERT. This is what the WordIdMapping class is for. It contains an array of 3 dictionaries: word_to_id where word_to_id[i] is a dictionary mapping an Li label to a unique integer. id_to_word is an array of 3 arrays where id_to_word[i] is an array containing the Li labels as strings. This is used for giving each label a unique integer id. As we iterate through the training set to encode each article, we extract the article label strings and call *map_data.add_and_get(labs)* which converts them to integer ids. This label representation will serve useful when performing multi-label classification. Namely, given a single article embedding, the output of the model forward pass is an array of 3 prediction arrays: *preds*. preds[i] is a vector shape: Li where Li is the number of labels in Li. For instance, preds[0] has shape 9 representing the un-normalized scores for each of the 9 L1 labels. Thus, it is useful to assign each L1 label a unique integer id between 0-8 which is what word_to_id is for! Similarly, we assign integer ids to L2 and L3 labels which have unique ids between 0-69 and 0-218 respectively.
 
+
+Note that no data augmentation was applied since we have an adequate volume of data in our dataset.
 
 <!-- After the data is processed, we return two arrays:  
 There is also the option to pad each article so they are the same length but we decided to omit this.  -->
