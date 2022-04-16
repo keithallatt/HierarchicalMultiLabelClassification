@@ -81,10 +81,14 @@ which are further tuned as part of our application. -->
 ### Model Parameters
 
 
+### Encoder
+
 The pre-trained `bert-base-uncased` model which we use as our encoder, contains 110 million parameters [2]. 
 
 
-### Understanding the Shapes of the Decoder
+### Decoder 
+
+#### Understanding the Shapes of the Decoder Components
 To count the number of parameters in the decoder portion of our model we must consider the embedding and classifier
 MLPs at each layer as well as the GRUs. The number of layers in each MLP and the output shape of the embedding MLPs is a hyperparameter. In our model, this is
 configured by specifying three parameters: embedding_size and [emb|clf]_size_mults. The former specifies the output shape of the embedding MLP. The latter is an n-tuple which defines the number of layers in the embedding/classifier MLPs and the number of hidden units in the current MLP layer as a multiple of the hidden units in the previous MLP layer. Note that the output shape of the classifier MLPs are fixed since they represent the un-normalized class scores for the L1,L2,L3 labels respectively. To illustrate, suppose embedding_size=100 and emb_size_mults = (1,2,3). The input/output shapes of MLP1 from the diagram looks like: (in_features=768, out_features=768) -> (in_features=768, out_features=1536) -> (in_features=1536, out_features=4608) -> (in_features=4608, out_features=100). The input/output shapes of MLP2 looks like:  (in_features=9, out_features=9) -> (in_features=9, out_features=18) -> (in_features=18, out_features=54) -> (in_features=54, out_features=100). Notice that the input to MLP1 is a 1x768 vector which represents the encoded article. The input to MLP2 is a 1x9 vector which represents the output of Layer 1. Also notice that the output features/number of hidden units in each layer is determined by the emb_multiplier: (1,2,3). Both MLPs output a 1x100 vector as determined by embedding_size=100. This is useful since the inputs to the GRU at each layer must be the same shape. 
@@ -93,8 +97,7 @@ The input/output of the classifier MLPs are determined in a similar fashion. clf
 
 Lastly, 
 
-
-
+#### Number of Parameters in the Decoder
 
 
 
