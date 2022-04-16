@@ -12,8 +12,8 @@ Our deep learning model will perform hierarchical, multi-label classification to
 ### Overview
 
 We tackle the hierarchical, multi-label classification task using an encoder-decoder 
-architecture composed of a transformer-based encoder and a GRU-based decoder. 
-
+architecture composed of a transformer-based encoder and a GRU-based decoder. process_documents() in data_cleaning.py 
+defines the implementation of our encoder. The HierarchicalRNN class in model.py defines the implementation of our decoder.
 
 
 ### Design Decisions
@@ -83,27 +83,74 @@ which are further tuned as part of our application. -->
 
 ### Encoder
 
-The pre-trained `bert-base-uncased` model which we use as our encoder, contains 110 million parameters [2]. 
+The pre-trained `bert-base-uncased` model which we use as our encoder, contains 110 million parameters [2]. However, these parameters have already been set by the pre-trained model so we don't include them as part of our tuneable parameter count.
 
 
 ### Decoder 
 
 #### Understanding the Shapes of the Decoder Components
+
+
+
 To count the number of parameters in the decoder portion of our model we must consider the embedding and classifier
 MLPs at each layer as well as the GRUs. The number of layers in each MLP and the output shape of the embedding MLPs is a hyperparameter. In our model, this is
 configured by specifying three parameters: embedding_size and [emb|clf]_size_mults. The former specifies the output shape of the embedding MLP. The latter is an n-tuple which defines the number of layers in the embedding/classifier MLPs and the number of hidden units in the current MLP layer as a multiple of the hidden units in the previous MLP layer. Note that the output shape of the classifier MLPs are fixed since they represent the un-normalized class scores for the L1,L2,L3 labels respectively. To illustrate, suppose embedding_size=100 and emb_size_mults = (1,2,3). The input/output shapes of MLP1 from the diagram looks like: (in_features=768, out_features=768) -> (in_features=768, out_features=1536) -> (in_features=1536, out_features=4608) -> (in_features=4608, out_features=100). The input/output shapes of MLP2 looks like:  (in_features=9, out_features=9) -> (in_features=9, out_features=18) -> (in_features=18, out_features=54) -> (in_features=54, out_features=100). Notice that the input to MLP1 is a 1x768 vector which represents the encoded article. The input to MLP2 is a 1x9 vector which represents the output of Layer 1. Also notice that the output features/number of hidden units in each layer is determined by the emb_multiplier: (1,2,3). Both MLPs output a 1x100 vector as determined by embedding_size=100. This is useful since the inputs to the GRU at each layer must be the same shape. 
 
 The input/output of the classifier MLPs are determined in a similar fashion. clf_multiplier is used instead of emb_multiplier to define the number of layers and hidden units in the classifier MLPs. The outputs of CLF1, CLF2 and CLF3 are 1x9, 1x70 and 1x219 respectively which represent the un-normalized class scores for L1, L2 and L3 respectively. 
 
-Lastly, 
+Lastly, the number of features of the GRUs in each layer is a hyperparameter which is calculated as a multiple of the emb_size. For instance, if emb_size = 100 and rnn_size_mult = 1, each GRU will contain 100 features. The number of GRU layers can also be configured via. rnn_n_hidden but we leave this as 1 when tuning our hyperparameters. 
 
 #### Number of Parameters in the Decoder
 
 
+Our final model uses the default parameters specified in the HierarchicalRNN class in model.py. A summary of the number of trainable decoder parameters is below:
+
+<table>
+  <tr>
+    <th>Component</th>
+    <th>Trainable Parameters</th>
+  
+  </tr>
+  <tr>
+    <td>MLP1</td>
+    <td>768*768 + 768*100 + 768+100 = 667492 </td>
+  
+  </tr>
+  <tr>
+    <td>MLP2</td>
+    <td>9*9 + 9*100 + 9+100 = 1090 </td>
+  </tr>
+  <tr>
+    <td>MLP3</td>
+    <td>70*70 + 70*100 + 70+100 = 12070 </td>
+  
+  </tr>
+  <tr>
+    <td>CLF1</td>
+    <td>100*100 + 100*9 + 100+9 = 11009 </td>
+   
+  </tr>
+  <tr>
+    <td>CLF2</td>
+    <td>100*100 + 100*70 + 100+70 = 17170</td>
+    
+  </tr>
+  <tr>
+    <td>CLF3</td>
+    <td>100*100 + 100*219 + 100+219 = 32219</td>
+  </tr>
+  <tr>
+    <td>GRU</td>
+    <td>60600</td>
+  </tr>
+  <tr>
+    <td>Total</td>
+    <td>801650</td>
+  </tr>
+</table>
 
 
-
-
+Therefore, the total number of trainable parameters used by our final model is 801,650.
 
 
 
@@ -172,5 +219,6 @@ There is also the option to pad each article so they are the same length but we 
 - update teacher forcing probability in model
 - rescale model diagram so it looks good on main Github page
 - can add Latex support to model explanations (i.e. L subscript 1 instead of L1)
+- maybe provide detailed GRU parameter breakdown for model parameter section
 
 
