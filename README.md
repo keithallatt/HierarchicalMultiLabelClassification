@@ -199,6 +199,13 @@ There is also the option to pad each article so they are the same length but we 
 
 ## Results
 
+### Quantitative Measures
+
+- L1,L2,L3, total loss and accuracy
+- compare results with BaselineMLP
+- compare with other dbpedia benchmarks
+- 
+
 *To be filled in*
 
 
@@ -220,5 +227,6 @@ There is also the option to pad each article so they are the same length but we 
 - rescale model diagram so it looks good on main Github page
 - can add Latex support to model explanations (i.e. L subscript 1 instead of L1)
 - maybe provide detailed GRU parameter breakdown for model parameter section
+- change multi-label classification to hierarchical multi-class classification
 
 
