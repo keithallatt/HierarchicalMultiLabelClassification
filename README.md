@@ -195,18 +195,28 @@ There is also the option to pad each article so they are the same length but we 
 
 ## Training
 
+### Training Curve
+
+### Hyperparameter Tuning 
 *To be filled in*
 
 ## Results
 
 ### Quantitative Measures
 
-- L1,L2,L3, total loss and accuracy
-- compare results with BaselineMLP
-- compare with other dbpedia benchmarks
-- 
 
-*To be filled in*
+In this section we will discuss the evaluation metric we use to assess the performance of our model.
+
+The task of multi-label classification is different from traditional multi-class classification. For the latter task, we would use accuracy as an evaluation metric. This is computed by simply dividing the number of correct classifications by the number of incorrect classifications. With multi-label classification we now have 3 labels to assign to an article, chosen from sets: L1, L2 and L3 respectively. We define the *total accuracy* as the accuracy across all 3 label sets. This is computed in the same way as with the multi-class classification task. We sum the number of correct classifications across all categories and divide by the number of misclassifications. In addition, we also compute individual L1, L2 and L3 accuracies so we can have a more granular picture of the per-category accuracies. Some other works like [3], [4] and [5] on multi-label classification use different evaluation metrics such as F1-score. However, we decided to keep our evaluation metric consistent with accuracy techniques used in the CSC413 course.
+
+
+### Quantitative and Qualitative Results
+
+### Justification of Results
+
+
+
+
 
 
 ## References
@@ -214,6 +224,12 @@ There is also the option to pad each article so they are the same length but we 
 [1] https://arxiv.org/pdf/1810.04805.pdf
 
 [2] https://huggingface.co/transformers/v3.3.1/pretrained_models.html
+
+[3] https://arxiv.org/pdf/1802.02528.pdf
+
+[4] https://aclanthology.org/2021.naacl-main.335.pdf
+
+[5] https://arxiv.org/pdf/1503.08581.pdf
 
 
 #### Authored by: Keith Allatt, Brandon Jaipersaud, David Chen, Renato Zimmermann
@@ -226,7 +242,9 @@ There is also the option to pad each article so they are the same length but we 
 - update teacher forcing probability in model
 - rescale model diagram so it looks good on main Github page
 - can add Latex support to model explanations (i.e. L subscript 1 instead of L1)
-- maybe provide detailed GRU parameter breakdown for model parameter section
+- highlight where GRU parameters come from in the model parameters section
 - change multi-label classification to hierarchical multi-class classification
+- include graph in intro which highlights the difference between standard multi-class classification
+and our hierarchical multi-label classification
 
 
