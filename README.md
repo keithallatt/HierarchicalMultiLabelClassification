@@ -246,7 +246,7 @@ We were also curious about the effect of having a GRU as part of our decoder. In
 The below table summarizes the performance across all 3 models. Each model was trained on a subset of the training set consisting of 10000 data points under default parameters and varying number of epochs. The accuracy was computed over the entire test set.  
 
 
-The "Original" model refers to our main model. The EncoderRNN was used with our standard HierarchicalRNN decoder. The BaselineMLP decoder was paired with our standard BERT encoder. We also include a row called ChooseCommonClass whose Li accuracy is computed by choosing the class that appears most frequently in each Li category. This is derived from the Summary Split and Statistics section where we determined what labels appear most frequently in each category. Recall, we saw that Agent is the most common L1 class with frequency roughly = 52% and Athlete is the most common L2 class with frequency roughly = 13%. In L3 there is no dominant class;The top 3 most frequent classes appear 0.80% of the time. Our model should at the bare minimum perform better than choosing the most common class. For the total accuracy in the ChooseCommonClass row, we average the L1, L2 and L3 accuracies.
+The "Original" model refers to our main model consisting of the BERT encoder + GRU/MLP decoder. The EncoderRNN was used with our standard GRU/MLP decoder. The BaselineMLP decoder was paired with our standard BERT encoder. We also include a row called ChooseCommonClass whose Li accuracy is computed by choosing the class that appears most frequently in each Li category. This is derived from the Summary Split and Statistics section where we determined what labels appear most frequently in each category. Recall, we saw that Agent is the most common L1 class with frequency roughly = 52% and Athlete is the most common L2 class with frequency roughly = 13%. In L3 there is no dominant class;The top 3 most frequent classes appear 0.80% of the time. Our model should at the bare minimum perform better than choosing the most common class. For the total accuracy in the ChooseCommonClass row, we average the L1, L2 and L3 accuracies.
 
 
 <table>
@@ -325,7 +325,7 @@ To verify the correctness of our model we created a few small custom datasets to
 </table>
 
 #### Future Experiments
-To further test if our model correctly learns the dependencies between different layers, we made a special training dataset consisting of only Agents which is an L1-label. This dataset can also be constructed by running debug/gen_small_datasets.py. When trained on this dataset, we would expect the model to be good at assigning L2-labels to articles conditional on the fact that they describe Agents. Unfortunately, we didn't get the time to perform this experiment. However, we suspect our model will learn these dependencies due to its high performance on the validation and test sets.
+To further test if our model correctly learns the dependencies between different layers, we made a special training dataset consisting of only Agents which is an L1-label. This dataset can also be constructed by running debug/gen_small_datasets.py. When trained on this dataset, we would expect the model to be good at assigning L2-labels to articles conditional on the fact that they describe Agents. Unfortunately, we didn't get the time to perform this experiment. However, we suspect that our model will learn these dependencies due to its high performance on the validation and test sets.
 
 
 
@@ -336,7 +336,20 @@ To further test if our model correctly learns the dependencies between different
 
 ### Justification of Results
 
-Based on the results collected in the previous section, we claim that our model performs very reasonably.
+Based on the results collected in the previous section, we claim that our model performs very reasonably. From the benchmarking table, we observe that our model (the "Original" model) performs significantly better than simply choosing the most common class in each category (ChooseCommonClass). It is surprising to see that the EncoderRNN model performs similarly to ChooseCommonClass. In other words, if we replaced the BERT encoder in our model with a GloVe embedding+GRU based encoder, it will perform nearly the same as ChooseCommonClass; An undesirable outcome! Another surprising result is that replacing our stacked MLP+GRU+MLP decoder with only classifier MLPs as in the BaselineMLP model, performs similarly to our model. Furthermore, the BaselineMLP trains much faster than our model and achieved the same total test accuracy as our model by a factor of 3-4 less epochs. This is interesting and may suggest that our decoder doesn't learn the dependencies between the different categories as we initially hypothesized. Nevertheless, our model still has very good performance for this unique classification task. **[Talk about final model performance here]**  
+
+- can talk about healthy learning+loss curves
+- high L3 accuracy which is impressive since L3 contains 219 classes
+
+
+
+Lastly, as can be seen from the "Overfitting to a Small Dataset" table in the previous section, our model overfits to each dataset in a small number of epochs. The L2 and L3 based datasets require more epochs since they contain much more classes than the L1 based dataset. This further convinved us of the correctness of our model.
+
+
+
+Can fit in the below:
+
+The accuracies can be ranked as follows: L1 > L2 > L3. This is because of the varying number of classes in each category. 
 
 
 ## Ethical Implications
