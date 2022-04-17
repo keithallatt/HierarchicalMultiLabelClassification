@@ -3,8 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 
-from utilities import make_layer_mult_mlp, to_one_hot
+import torchtext
 
+from utilities import make_layer_mult_mlp, to_one_hot, get_param_sizes
+
+glove = torchtext.vocab.GloVe(name="6B", dim=50)
 
 class DBPedia(Dataset):
 
@@ -52,7 +55,21 @@ class BaselineMLP(nn.Module):
         return preds
 
 
-
+class EncoderRNN(nn.Module):
+    def __init__(self, input_size=50, hidden_size=768):
+        super(EncoderRNN, self).__init__()
+        self.emb = nn.Embedding.from_pretrained(glove.vectors)
+        self.hidden_size = hidden_size
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+    
+    def forward(self, x):
+        # Look up the embedding
+        x = self.emb(x)
+        #print(x.shape)
+        # Forward propagate the RNN
+        out, last_hidden = self.rnn(x)
+        #print("EXEC2")
+        return last_hidden
 
 class HierarchicalRNN(nn.Module):
 
@@ -112,15 +129,22 @@ if __name__ == "__main__":
     import numpy as np
     from transformers import BertTokenizer, BertModel
 
-    # pred_model = HierarchicalRNN(
-    #     input_size=768, emb_size=100, output_sizes=(9, 70, 219)
-    # )
+    pred_model = HierarchicalRNN(
+        input_size=768, emb_size=100, output_sizes=(9, 70, 219)
+    )
 
-    #print(pred_model)
+    for p in pred_model.rnn.parameters():
+        print(p.shape)
+    
+    #print("rnn params are {}".format(pred_model.rnn.parameters()))
 
-    baseline_model = BaselineMLP(input_size=768, output_sizes=(9, 70, 219))
+    print("params are {}".format(get_param_sizes(pred_model)))
 
-    print(baseline_model)
+    print(pred_model)
+
+    #baseline_model = BaselineMLP(input_size=768, output_sizes=(9, 70, 219))
+
+    #print(baseline_model)
 
     tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
     emb_model = BertModel.from_pretrained("bert-base-uncased")
@@ -135,13 +159,13 @@ if __name__ == "__main__":
                  "had served him well. But now, as long as they existed, he "
                  "was living on borrowed time.")]
 
-    doc = tokenizer(raw_docs, return_tensors='pt', padding=True)
-    doc_emb = emb_model(**doc).pooler_output
-    print(doc_emb.shape)
+    #doc = tokenizer(raw_docs, return_tensors='pt', padding=True)
+    #doc_emb = emb_model(**doc).pooler_output
+    #print(doc_emb.shape)
 
     # preds = pred_model(doc_emb)
 
-    baseline_preds = baseline_model(doc_emb)
+    #baseline_preds = baseline_model(doc_emb)
     #print(baseline_preds[2].shape)
 
     # for raw in raw_docs:
