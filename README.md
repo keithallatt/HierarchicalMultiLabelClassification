@@ -198,7 +198,30 @@ There is also the option to pad each article so they are the same length but we 
 ### Training Curve
 
 ### Hyperparameter Tuning 
-*To be filled in*
+We first ran a grid-search over three candidate hyperparameters: learning rate, weight decay, and momentum, to find a reasonable baseline model and narrow the values that randomized search could take on. The values for the grid search try to cover the extremes of each variable domain. The tables below show the accuracy of each model on the validation set after 10 epochs of training, distinguished by learning rate.
+
+Learning rate = 0.001
+| <br>  Weight Decay <br>  Momentum   | 0         | 0.01      | 0.1       |
+|-----|-----------|-----------|-----------|
+| 0   | 0.8167745 | 0.62938   | 0.218324  |
+| 0.5 | 0.7811201 | 0.6425668 | 0.2183429 |
+| 1   | 0.7973132 | 0.6279106 | 0.218315  |
+
+Learning rate = 0.01
+|  <br>  Weight Decay <br>  Momentum   | 0        | 0.01     | 0.1      |
+|-----|----------|----------|----------|
+| 0   | 0.218324 | 0.337444 | 0.218324 |
+| 0.5 | 0.218324 | 0.345999 | 0.218315 |
+| 1   | 0.218324 | 0.33046  | 0.218334 |
+
+Learning rate = 0.1
+|  <br>  Weight Decay <br>  Momentum    | 0        | 0.01     | 0.1      |
+|-----|----------|----------|----------|
+| 0   | 0.218343 | 0.218065 | 0.216889 |
+| 0.5 | 0.218352 | 0.218297 | 0.218334 |
+| 1   | 0.218343 | 0.218398 | 0.218223 |
+
+From the results above, the model we use as a baseline has a learning rate of 0.001, with the other two parameters being 0. From there, we used randomized search to test models with slight variations in hyperparameter values to the baseline model. This is achieved by generating the values for each hyperparameter from a truncated Gaussian distribution. For example, the Gaussian for the learning rate is centered at 0.001 and truncated to only generate values in the interval (0.0005, 0.0015), so most of the time we will generate values around 0.001 and also never generate values too far from the baseline value. For the weight decay and momentum Gaussians, they were centered around 0.005 and truncated to be in the interval of (0, 0.01). Then, we generated a reasonable number of models to compare with the baseline to see if slight variations can improve validation accuracy. The model we are currently using has learning rate of 0.001020977066089074, weight decay of 0, and momentum of 0.
 
 ## Results
 
