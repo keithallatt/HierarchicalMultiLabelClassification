@@ -26,6 +26,8 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 import numpy as np
+from scipy.stats import truncnorm as tn
+from scipy.stats import randint as randint
 
 # number of labels used in multi-label classification
 NUM_LABELS = 3 # l1,l2,l3
@@ -388,7 +390,7 @@ def gen_category_acc_plots(its_sub, train_accs, val_accs, save_imgs):
 
 
 def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x,
-                outfile="model.pickle", train_opts=None, device="cpu", show_category_stats=True, **kwargs):
+                outfile="model.pickle", train_opts=None, device="cpu", show_category_stats=True, show_plts=False, **kwargs):
 
     # can specify data_loader, by default, the identify function x -> x. Acts like a preprocessor.
     training_dataset = data_loader(train_data)
@@ -457,8 +459,8 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
             except ValueError:
                 print("Learning curve unavailable")
                 print(len(its_sub), len(train_accs[-1]), len(val_accs[-1]))
-
-    input("Showing plots. Type anything to continue.")
+    if show_plts:
+        input("Showing plots. Type anything to continue.")
 
     if train_accs:
         str_repr = "Final Training Accuracy Across All Categories: {}\n".format(train_accs[-1][-1]) + \
@@ -487,6 +489,8 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
             loss_fig.savefig(kwargs.get("loss_fig_out", "loss_curve.png"))
         if train_fig is not None:
             train_fig.savefig(kwargs.get("train_fig_out", "train_curve.png"))
+
+    return val_accs[-1][-1], str_repr_test_acc.split(" ")[5]
 
 
 def _tot_params_helper(model):
@@ -537,6 +541,68 @@ def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"
 
         if is_example:
             return summary, label_emb, output
+
+def generate_hyperparameters():
+    """ Using random search, generate values for hyperparameters
+    based on a Gaussian distribution. 
+    """
+    hp = {"calc_acc_every":4, "num_epochs": 10}
+
+    parameters = {"batch_size": [48, 80],
+                  "learning_rate": [0.0005, 0.0015],
+                  "weight_decay": [0, 0.01],
+                  "momentum": [0.0, 0.01]}
+
+    for p in parameters:
+        if p == "batch_size" or p == "num_epochs":
+            value = randint(parameters[p][0], parameters[p][1]).rvs(size=1)
+        else:
+            value = tn(a=parameters[p][0], b=parameters[p][1], scale=1).rvs(size=1)
+        print(f"parameter: {p}, value: {value[0]}")
+        hp[p] = value[0]
+    
+    hp["batch_size"] = int(hp["batch_size"])
+    print("-" * 30)
+    return hp
+
+def find_best_parameters(num_of_models, model, train, val, test, device):
+    models = []
+    val_scores, test_scores = [], []
+    hp = {"calc_acc_every":4, "batch_size": 64, "num_epochs": 10}
+
+    # Some possible grid search values
+    # learning_rate = [0.001, 0.01, 0.1]
+    # weight_decay = [0.0, 0.01, 0.1]
+    # momentum = [0, 0.5, 1]
+
+    # for r in learning_rate:
+    #     for w in weight_decay:
+    #         for m in momentum:
+    #             hp["learning_rate"] = r
+    #             hp["weight_decay"] = w
+    #             hp["momentum"] = m
+    #             print(f"Parameters: {r}, {w}, {m}")
+    #             models.append(hp)
+    #             a, b = train_model(model, train, val, test, 
+    #                 device=device, train_opts=hp, show_plts=False, save_imgs=False)
+    #             val_scores.append(a)
+    #             test_scores.append(b.split("\n")[0])
+    #             print("-" * 30)
+
+    for i in range(num_of_models):
+        print(f"Training model with hyperparameters {i}")
+        hp = generate_hyperparameters()
+        models.append(hp)
+        a, b = train_model(model, train, val, test, 
+                    device=device, train_opts=hp, show_plts=False, save_imgs=False)
+        val_scores.append(a)
+        test_scores.append(b.split("\n")[0])
+        print("-" * 30)
+    
+    best = val_scores.index(max(val_scores))
+    print(f"Hyperparameters resulting in the highest validation accuracy are {models[best]}")
+    print(f"Test accuracy of this model is: {test_scores[best]}")
+    return models[best]
 
 if __name__ == "__main__":
     # print(find_example(None))
