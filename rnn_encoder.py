@@ -1,3 +1,10 @@
+'''
+An alternate encoder used to benchmark against the main BERT encoder in data_cleaning.py
+
+Author: Brandon Jaipersaud
+
+'''
+
 from data_cleaning import gen_from_data, WordIdMapping
 import csv
 import pickle
@@ -28,6 +35,9 @@ glove = torchtext.vocab.GloVe(name="6B", dim=50)
 glove_emb = nn.Embedding.from_pretrained(glove.vectors)
 
 DOC_LENGTH = 100
+MAX_MEMORY = 10000
+
+NUM_POINTS = 5000
 
 def parse_doc(doc):
     
@@ -70,12 +80,13 @@ def convert_to_embedding(doc):
        
     
 def process_documents(data_files,
-                      emb_suffix="_alt_embeddings.pt",
-                      lab_suffix="_alt_labels.pt",
-                      map_file="alt_mapping.pkl"):
+                      emb_suffix="_alt_embeddings_gru.pt",
+                      lab_suffix="_alt_labels_gru.pt",
+                      map_file="alt_mapping_gru.pkl"):
 
     
     map_data = WordIdMapping(3)
+
     
     for file_name in data_files:
         print(f"PROCESSING: {file_name}")
@@ -86,13 +97,21 @@ def process_documents(data_files,
 
         try:
             num_saved_points = 0
+            emb_list_size = 0
             for doc, labs in tqdm(doc_gen):
                 lab_ids = map_data.add_and_get(labs)
                 emb = convert_to_embedding(doc) # 1x768
+                
                 if torch.is_tensor(emb):
+                    #print(emb.shape)
                     num_saved_points += 1
                     emb_list.append(emb.squeeze())
                     lab_list.append(torch.tensor(lab_ids))
+                    emb_list_size += 1
+
+                if emb_list_size == NUM_POINTS:
+                    raise Exception
+                    
 
         finally:
              print("Number of saved articles in {} is {}".format(file_name, num_saved_points))
