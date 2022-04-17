@@ -211,14 +211,100 @@ The task of multi-label classification is different from traditional multi-class
 
 
 ### Quantitative and Qualitative Results
-Various techniques were used to assess the reasonableness of our model. We did some benchmarking to compare the performance of our model to other models. Recall that our model uses an encoder-decoder architecture with a BERT transformer as the encoder and three stacked MLP+GRU+MLP layers as the decoder. The modularity of the encoder-decoder architecture allows for different encoder/decoder models to be experimented with. For instance, we were curious about the effect of the BERT encoder on the performance of our model. So we developed a new encoder called EncoderRNN in model.py. This encoder uses GloVe embeddings to represent each word in an article which then gets fed into a GRU with 768 features in each hidden state. The output is a 1x768 vector which represents the encoded article. Note that this is the same shape as the BERT encoder output in our original model. The results of this experiment are shown below:
+
+#### Testing the Reasonableness of our Model
+
+Various techniques were used to assess the reasonableness of our model. We did some benchmarking to compare the performance of our model to other models. Recall that our model uses an encoder-decoder architecture with a BERT transformer as the encoder and three stacked MLP+GRU+MLP layers as the decoder. The modularity of the encoder-decoder architecture allows for different encoder/decoder models to be experimented with. For instance, we were curious about the effect of the BERT encoder on the performance of our model. So we developed a new encoder called EncoderRNN in model.py. This encoder uses GloVe embeddings to represent each word in an article which then gets fed into a GRU with 768 features in each hidden state. The output is a 1x768 vector which represents the encoded article. Note that this is the same shape as the BERT encoder output in our original model.
+
+
+We were also curious about the effect of having a GRU as part of our decoder. Intuitively, this is what connects the layers together and allows the L2 layer to make L2-classifications based on information from the L1 layer and similarly for the L3 layer making L3-classifications based on information gathered from the L2 layer (and indirectly, the L1 layer). For instance, recall that Place ∈ L1, Building ∈ L2 and HistoricalBuilding ∈ L3. The model should be able to use L1-based information (i.e. that the article describes a Place) when making an L2-classification (i.e. classifying the article as a Building which is a type of Place). To this end, we developed an alternate decoder called BaselineMLP in model.py. Recall the computation graph from earlier. This decoder only uses the 3 classifier MLPs: CLF1, CLF2 and CLF3. The encoded article is fed separately into each classifier and thus, the classifications in each layer are made independently. 
+
+The below table summarizes the performance across all 3 models. Each model was trained on a subset of the training set consisting of 10000 data points under default parameters and varying number of epochs. The accuracy was computed over the entire test set.  
+
+
+The "Original" model refers to our main model. The EncoderRNN was used with our standard HierarchicalRNN decoder. The BaselineMLP decoder was paired with our standard BERT encoder. We also include a row called ChooseCommonClass whose Li accuracy is computed by choosing the class that appears most frequently in each Li category. This is derived from the Summary Split and Statistics section where we determined what labels appear most frequently in each category. Recall, we saw that Agent is the most common L1 class with frequency roughly = 52% and Athlete is the most common L2 class with frequency roughly = 13%. In L3 there is no dominant class;The top 3 most frequent classes appear 0.80% of the time. Our model should at the bare minimum perform better than choosing the most common class. For the total accuracy in the ChooseCommonClass row, we average the L1, L2 and L3 accuracies.
+
+
+<table>
+  <tr>
+    <th>Model</th>
+    <th>L1-Test-Accuracy</th>
+    <th>L2-Test-Accuracy</th>
+    <th>L3-Test-Accuracy</th>
+    <th>Total-Test-Accuracy</th>
+    <th>epochs</th>
+  </tr>
+  <tr>
+    <td>ChooseCommonClass</td>
+    <td>0.52</td>
+    <td>0.13</td>
+    <td>0.008</td>
+    <td>0.22</td>
+    <td>N/A</td>
+  </tr>
+  <tr>
+    <td>Original</td>
+    <td>0.95</td>
+    <td>0.78</td>
+    <td>0.58</td>
+    <td>0.77</td>
+    <td>25</td>
+  </tr>
+   <tr>
+    <td>BaselineMLP</td>
+    <td>0.92</td>
+    <td>0.79</td>
+    <td>0.64</td>
+    <td>0.78</td>
+    <td>7</td>
+  </tr>
+   <tr>
+    <td>EncoderRNN</td>
+    <td>0.52</td>
+    <td>0.13</td>
+    <td>0.007</td>
+    <td>0.22</td>
+    <td>12</td>
+  </tr>
+ 
+</table>
+
+These results will be further analysed in the Justification of Results section.
+
+
+To verify the correctness of our model we created a few small custom datasets to test the models' ability to overfit on a small dataset. These can be generated by running debug/gen_small_datasets.py. It will construct 3 small datasets each of which contain 2 instances of each class in the L1, L2 and L3 categories. For instance, DBPEDIA_train_small_l1.csv contains 18 points in total, 2 of which come from a unique L1 class. Below is a summary of how long it took our model to reach near 100% accuracy on each dataset:
+
+
+<table>
+  <tr>
+    <th>Dataset</th>
+    <th>Training Accuracy</th>
+    <th>Epochs</th>
+  </tr>
+  <tr>
+    <td>DBPEDIA_train_small_l1.csv</td>
+    <td>0.98</td>
+    <td>90</td>
+  </tr>
+   <tr>
+    <td> DBPEDIA_train_small_l2.csv</td>
+    <td>0.98</td>
+    <td>150</td>
+  </tr>
+   <tr>
+    <td> DBPEDIA_train_small_l3.csv</td>
+    <td>0.94</td>
+    <td>150</td>
+  </tr>
+ 
+</table>
+
+
+To further test if our model correctly learns the dependencies between different layers, we made a special training dataset consisting of only Agents which is an L1-label. This dataset can also be constructed by running debug/gen_small_datasets.py. When trained on this dataset, we would expect the model to be good at assigning L2-labels to articles conditional on the fact that they describe Agents. Unfortunately, we didn't get the time to perform this experiment. However, we suspect our model will learn these dependencies due to its high performance on the validation and test sets.
 
 
 
-We were also curious about the effect of having a GRU as part of our decoder. Intuitively, this is what connects the layers together and allows the L2 layer to make L2-classifications based on information from the L1 layer and similarly for the L3 layer making L3-classifications based on information gathered from the L2 layer (and indirectly, the L1 layer). For instance, recall that Place ∈ L1, Building ∈ L2 and HistoricalBuilding ∈ L3. The model should be able to use L1-based information (i.e. that the article describes a Place) when making an L2-classification (i.e. classifying the article as a Building which is a type of Place). To this end, we developed an alternate decoder called BaselineMLP in model.py. Recall the computation graph from earlier. This decoder only uses the 3 classifier MLPs: CLF1, CLF2 and CLF3. The encoded article is fed separately into each classifier and thus, the classifications in each layer are made independently. The results of the experiment are shown below:
 
-
-To further test if our model correctly learns the dependencies between different layers, we made a special training dataset consisting of only Agents which is an L1-label. The construction of this dataset is in debug/gen_small_datasets.py. When trained on this dataset, we would expect the model to be good at assigning L2-labels to articles conditional on the fact that they describe Agents. 
 
 
 ### Justification of Results
