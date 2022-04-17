@@ -77,7 +77,7 @@ if __name__ == "__main__":
     '''
     train_opts = {
         "calc_acc_every": 4,
-        "num_epochs": 7,
+        "num_epochs": 10,
         "checkpoint_path" : False, 
         "load_checkpoint" : False,
         "load_checkpoint_path" : False,
@@ -89,6 +89,11 @@ if __name__ == "__main__":
     '''
     Toggle save_imgs to True to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
     '''
-    hp = find_best_parameters(5, model, train, val, test, device)
+    # hp = find_best_parameters(20, model, train, val, test, device)
+    ho = {'calc_acc_every': 4, 'batch_size': 64, 'learning_rate': 0.001020977066089074, 'weight_decay': 0.000, 'momentum': 0.000, 'num_epochs': 20}
+    train_model(model, train, val, test, 
+        device=device, train_opts=ho, show_plts=False, save_imgs=False)
     # train_model(model, train, val, test, 
-    #     device=device, train_opts=hp, show_plts=False, save_imgs=False)
+    #     device=device, train_opts=train_opts, show_plts=False, save_imgs=False)
+
+        

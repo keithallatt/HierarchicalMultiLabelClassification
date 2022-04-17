@@ -25,6 +25,8 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 import numpy as np
+from scipy.stats import truncnorm as tn
+from scipy.stats import randint as randint
 
 # number of labels used in multi-label classification
 NUM_LABELS = 3 # l1,l2,l3
@@ -536,21 +538,19 @@ def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"
             return summary, label_emb, output
 
 def generate_hyperparameters():
-    from scipy.stats import truncnorm as tn
-    from scipy.stats import randint as sp_randint
     """ Using random search, generate values for hyperparameters
     based on a Gaussian distribution. 
     """
-    hp = {"calc_acc_every":4}
-    parameters = {"batch_size": [64, 128],
-                  "learning_rate": (0.001, 0.01),
-                  "weight_decay": (0.001, 0.1),
-                  "momentum": (0.5, 0.9),
-                  "num_epochs": (7, 14)}
+    hp = {"calc_acc_every":4, "num_epochs": 10}
+
+    parameters = {"batch_size": [48, 80],
+                  "learning_rate": [0.0005, 0.0015],
+                  "weight_decay": [0, 0.01],
+                  "momentum": [0.0, 0.01]}
 
     for p in parameters:
         if p == "batch_size" or p == "num_epochs":
-            value = sp_randint(parameters[p][0], parameters[p][1]).rvs(size=1)
+            value = randint(parameters[p][0], parameters[p][1]).rvs(size=1)
         else:
             value = tn(a=parameters[p][0], b=parameters[p][1], scale=1).rvs(size=1)
         print(f"parameter: {p}, value: {value[0]}")
@@ -561,9 +561,29 @@ def generate_hyperparameters():
     return hp
 
 def find_best_parameters(num_of_models, model, train, val, test, device):
-    # Later use grid search for model layer sizes as another hyperparameter
     models = []
     val_scores, test_scores = [], []
+    hp = {"calc_acc_every":4, "batch_size": 64, "num_epochs": 10}
+
+    # Some possible grid search values
+    # learning_rate = [0.001, 0.01, 0.1]
+    # weight_decay = [0.0, 0.01, 0.1]
+    # momentum = [0, 0.5, 1]
+
+    # for r in learning_rate:
+    #     for w in weight_decay:
+    #         for m in momentum:
+    #             hp["learning_rate"] = r
+    #             hp["weight_decay"] = w
+    #             hp["momentum"] = m
+    #             print(f"Parameters: {r}, {w}, {m}")
+    #             models.append(hp)
+    #             a, b = train_model(model, train, val, test, 
+    #                 device=device, train_opts=hp, show_plts=False, save_imgs=False)
+    #             val_scores.append(a)
+    #             test_scores.append(b.split("\n")[0])
+    #             print("-" * 30)
+
     for i in range(num_of_models):
         print(f"Training model with hyperparameters {i}")
         hp = generate_hyperparameters()
