@@ -21,7 +21,7 @@ if __name__ == "__main__":
 
 
     # how much data to load
-    train_obs= 40000
+    train_obs= 1000
     val_obs = 36003
     test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -77,11 +77,13 @@ if __name__ == "__main__":
     '''
     train_opts = {
         "calc_acc_every": 4,
-        "num_epochs": 10,
+        "num_epochs": 1000,
         "checkpoint_path" : False, 
         "load_checkpoint" : False,
         "load_checkpoint_path" : False,
-        "optimizer" : "adam"
+        "optimizer" : "adam",
+        "tf_init": 0, 
+        "tf_decay": 0.5
     }
 
     #param_sizes = get_param_sizes(model)
