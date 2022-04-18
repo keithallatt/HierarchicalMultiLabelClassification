@@ -407,6 +407,10 @@ Even with the amount of data, the model is still limited by the labels it has ac
 Keith Allatt
 
 Brandon Jaipersaud
+- Introduction, Model, Data, Results sections of the report
+- Model benchmarking experiments
+- Creating granular, per-category accuracies. i.e. L1, L2, L3 accuracies
+- model debugging via. gen_small_datasets.py 
 
 David Chen
 
