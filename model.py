@@ -2,8 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset
+import torchtext
 
 from utilities import make_layer_mult_mlp, to_one_hot
+
+glove = torchtext.vocab.GloVe(name="6B", dim=50)
 
 
 class DBPedia(Dataset):
@@ -51,6 +54,20 @@ class BaselineMLP(nn.Module):
 
         return preds
 
+
+class EncoderRNN(nn.Module):
+    def __init__(self, input_size=50, hidden_size=768):
+        super(EncoderRNN, self).__init__()
+        self.emb = nn.Embedding.from_pretrained(glove.vectors)
+        self.hidden_size = hidden_size
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+    
+    def forward(self, x):
+        # Look up the embedding
+        x = self.emb(x)
+        # Forward propagate the RNN
+        out, last_hidden = self.rnn(x)
+        return last_hidden
 
 
 
