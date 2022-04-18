@@ -197,7 +197,7 @@ There is also the option to pad each article so they are the same length but we 
 ### Training Curve
 
 ### Hyperparameter Tuning 
-We first ran a grid-search over three candidate hyperparameters: learning rate, weight decay, and momentum, to find a reasonable baseline model and narrow the values that randomized search could take on. The values for the grid search try to cover the extremes of each variable domain. The tables below show the accuracy of each model on the validation set after 10 epochs of training, distinguished by learning rate. Note that the definition of accuracy for our task of HMLC will be defined and discussed in the Quantitative Measures section below.
+We first ran a grid-search over three candidate hyperparameters: learning rate, weight decay, and momentum, to find a reasonable baseline model and narrow the values that randomized search could take on. The values for the grid search try to cover the extremes of each variable domain. The tables below show the accuracy of each model on the validation set after 10 epochs of training, distinguished by learning rate with weight decay values on the left and momentum values on the right. Note that the definition of accuracy for our task of HMLC will be defined and discussed in the Quantitative Measures section below.
 
 Learning rate = 0.001
 | <br>  Weight Decay <br>  Momentum   | 0         | 0.01      | 0.1       |
@@ -220,7 +220,7 @@ Learning rate = 0.1
 | 0.5 | 0.218352 | 0.218297 | 0.218334 |
 | 1   | 0.218343 | 0.218398 | 0.218223 |
 
-From the results above, the model we use as a baseline has a learning rate of 0.001, with the other two parameters being 0. From there, we used randomized search to test models with slight variations in hyperparameter values to the baseline model. This is achieved by generating the values for each hyperparameter from a truncated Gaussian distribution. For example, the Gaussian for the learning rate is centered at 0.001 and truncated to only generate values in the interval (0.0005, 0.0015), so most of the time we will generate values around 0.001 and also never generate values too far from the baseline value. For the weight decay and momentum Gaussians, they were centered around 0.005 and truncated to be in the interval of (0, 0.01). Then, we generated a reasonable number of models to compare with the baseline to see if slight variations can improve validation accuracy. The model we are currently using has learning rate of 0.001020977066089074, weight decay of 0, and momentum of 0.
+From the results above, the model we use as a baseline has a learning rate of 0.001, with the other two parameters being 0. From there, we used randomized search to test models with slight variations in hyperparameter values to the baseline model. This is achieved by generating the values for each hyperparameter from a truncated Gaussian distribution. For example, the Gaussian for the learning rate is centered at 0.001 and truncated to only generate values in the interval (0.0005, 0.0015), so most of the time we will generate values around 0.001 and also never generate values too far from the baseline value. For the weight decay and momentum Gaussians, they were centered around 0.005 and truncated to be in the interval of (0, 0.01). Then, we generated a reasonable number of models to compare with the baseline to see if slight variations can improve validation accuracy. The model we are currently using has a learning rate of 0.001020977066089074, weight decay of 0, and momentum of 0.
 
 ## Results
 
@@ -349,13 +349,13 @@ Our final model uses the hyperparameters discussed in the Hyperparameter Tuning 
 **Insert final accuracies here:**
 
 
-Final L1 Test Accuracy:
+Final L1 Test Accuracy: 0.9822
 
-Final L2 Test Accuracy:
+Final L2 Test Accuracy: 0.9093
 
-Final L3 Test Accuracy:
+Final L3 Test Accuracy: 0.83
 
-Final Total Test Accuracy:
+Final Total Test Accuracy: 0.9072
 
 ### Justification of Results
 
