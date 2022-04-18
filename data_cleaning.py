@@ -31,35 +31,53 @@ testing_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l3.csv")
 
 
 class WordIdMapping:
+    """Class that creates multi-level word-id mappings used to create
+    numeric ids for word labels in different levels.
+    """
+
     def __init__(self, n_levels):
+        """Initialize object."""
         self.n_levels = n_levels
         self.word_to_id = [dict() for _ in range(n_levels)]
         self.id_to_word = [list() for _ in range(n_levels)]
 
     def add_word(self, level, word):
+        """Add a word to a given level. Do nothing if word is already
+        present.
+        """
         if word not in self.word_to_id[level]:
             self.word_to_id[level][word] = len(self.id_to_word[level])
             self.id_to_word[level].append(word)
 
     def add_set(self, words):
+        """Add a set of words to each available level.
+        """
         assert len(words) == self.n_levels
         for i, word in enumerate(words):
             self.add_word(i, word)
 
     def get_word_set(self, words):
+        """Get the ids for a set of words."""
         return tuple([self.word_to_id[i][word]
                       for i, word in enumerate(words)])
 
     def add_and_get(self, words):
+        """Add a set of words and get back their ids.
+        """
         self.add_set(words)
         return self.get_word_set(words)
 
     def get_word_from_id(self, level, _id):
+        """Get word represented by a given ID."""
         return self.id_to_word[level][_id]
 
 
 def csv_file_generator(infile: Union[str, Path]) -> Generator[tuple, None, None]:
-    """ Clean csv file contents and yield row by row. """
+    """ Clean csv file contents and yield a text accompanied by its labels
+    row by row.
+
+    Used in the aggregate DBPedia dataset.
+    """
 
     l1i, l2i, l3i = 1, 2, 3  # indices of l1, l2, and l3 category in all data file.
 
@@ -106,7 +124,11 @@ def csv_file_generator(infile: Union[str, Path]) -> Generator[tuple, None, None]
 
 
 def gen_from_data(infile: Union[str, Path]) -> Generator[tuple, None, None]:
-    """Get contents of train, val or test data"""
+    """Get contents of train, validateion or test data in the same format as
+    the aggregate dataset.
+
+    This function performs all necessary text cleaning.
+    """
 
     with open(infile, mode='r') as file:
         # reads file in, line by line.
@@ -127,7 +149,13 @@ def process_documents(data_files,
                       emb_suffix="_embeddings.pt",
                       lab_suffix="_labels.pt",
                       map_file="mapping.pkl"):
-
+    """Get text and labels from raw documents downloaded from Kaggle and save
+    three objects from them:
+    1. An embedding matrix whose rows are the BERT embedding of each document.
+    2. A label matrix whose rows are the numeric ID combination for each word
+        label.
+    3. A word-id mapping object for translating ids used in (2).
+    """
     rm_punct = str.maketrans('', '', punctuation)
     tokenizer = BertTokenizer.from_pretrained("bert-base-uncased")
     model = BertModel.from_pretrained("bert-base-uncased")
@@ -154,7 +182,7 @@ def process_documents(data_files,
         torch.save(torch.stack(emb_list), "processed_data/" + file_name.stem+emb_suffix)
         torch.save(torch.stack(lab_list), "processed_data/" + file_name.stem+lab_suffix)
 
-    # "processed_data/" + 
+    # "processed_data/" +
     with open(map_file, "wb") as f:
         pickle.dump(map_data, f)
 
@@ -201,6 +229,6 @@ if __name__ == '__main__':
     #process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
     #                   for name in ["train", "val", "test"]])
 
-    
+
     # for d, ls in g:
     #     print(d[:min(len(d), 100)], ls)

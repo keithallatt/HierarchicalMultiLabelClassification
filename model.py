@@ -7,25 +7,43 @@ from utilities import make_layer_mult_mlp, to_one_hot
 
 
 class DBPedia(Dataset):
+    """Dataset object for retrieving document embeddings and processed labels
+    from previously-processed matrices.
+    """
 
     def __init__(self, emb_file, lab_file, load_func=torch.load, obs=None):
+        """Initialize DBPedia dataset object.
+
+        Arguments:
+            emb_file: path to the embedding matrix.
+            lab_file: path to the label matrix.
+        """
 
         super(Dataset, self).__init__()
         self.embs = load_func(emb_file)[:obs]
         self.labs = load_func(lab_file)[:obs]
 
     def __len__(self):
+        """Length as the number of embedded points."""
         return self.embs.shape[0]
 
     def __getitem__(self, idx):
+        """Get data from an embedded document and label."""
         return self.embs[idx], self.labs[idx]
 
 
-
 class BaselineMLP(nn.Module):
+    """Baseline model to compare against the proposed solution."""
 
     def __init__(self, input_size: int, output_sizes: tuple,
                  clf_size_mults: tuple = (1,)):
+        """Initialize baseline model.
+
+        input_size: size of input
+        output_size: size of output
+        clf_size_mults: size of hidden layers as a multiple of the size of the
+            last layer.
+        """
 
         super(BaselineMLP, self).__init__()
 
@@ -47,18 +65,31 @@ class BaselineMLP(nn.Module):
             clf = torch.squeeze(clf, dim=0)
 
             preds.append(clf)
-           
 
         return preds
 
 
-
-
 class HierarchicalRNN(nn.Module):
+    """Proposed hierarchical prediction RNN."""
 
     def __init__(self, input_size: int, emb_size: int, output_sizes: tuple,
                  emb_size_mults: tuple = (1,), clf_size_mults: tuple = (1,),
                  rnn_size_mult: int = 1, rnn_n_hidden: int = 1):
+        """Initialize hierarchical RNN.
+
+        Arguments:
+            input_size (int): size of document embedding inputs.
+            emb_size (int): constant embedding size. This is the size of the
+                inputs to the RNN.
+            output_sizes (tuple): size of each output category.
+            emb_size_mults (tuple): size of the the embedding layers as a
+                multiple of the size of the last layer.
+            clf_size_mults (tuple): size of the the classifier layers as a
+                multiple of the size of the last layer.
+            rnn_size_mult (int): size of the RNN hidden layer as a multiple of
+                the embedding size.
+            rnn_n_hidden (int): number of RNN hidden layers.
+        """
 
         super(HierarchicalRNN, self).__init__()
 
@@ -82,6 +113,16 @@ class HierarchicalRNN(nn.Module):
             )
 
     def forward(self, doc_emb: torch.tensor, true_labs=None):
+        """Forward pass on data.
+
+        Arguments:
+            doc_emb (torch.tensor): document embeddings.
+            true_labs [optional]: True labels of the document embeddings, used
+                for teacher forcing. If specified, the true labels are fed to
+                each stage instead of the last stage's predictions. If None,
+                the label prediction from the last layer is fed to the next
+                stage.
+        """
 
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
@@ -110,6 +151,7 @@ class HierarchicalRNN(nn.Module):
 
 
 if __name__ == "__main__":
+    """Perform model tests"""
 
     import numpy as np
     from transformers import BertTokenizer, BertModel
