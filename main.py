@@ -5,23 +5,21 @@ main.py
 """
 from unicodedata import category
 import torch
+import pickle
 
-from utilities import train_model, get_param_sizes, generate_hyperparameters, find_best_parameters
+from utilities import train_model, get_param_sizes, generate_hyperparameters, \
+    find_best_parameters, find_correct_classifications
 from model import DBPedia, HierarchicalRNN, BaselineMLP
 
 
-
 if __name__ == "__main__":
-
-  
-
     file_fmt = "processed_data/DBPEDIA_{split}_{var}.pt"
     small_file_fmt = "processed_data/DBPEDIA_{split}_small_{var}.pt"
     l2_l1_file_fmt = "processed_data/DBPEDIA_l2_l1_Agent_{var}.pt"
 
 
     # how much data to load
-    train_obs= 1000
+    train_obs = 5000
     val_obs = 36003
     test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -77,11 +75,11 @@ if __name__ == "__main__":
     '''
     train_opts = {
         "calc_acc_every": 4,
-        "num_epochs": 1000,
-        "checkpoint_path" : False, 
-        "load_checkpoint" : False,
-        "load_checkpoint_path" : False,
-        "optimizer" : "adam",
+        "num_epochs": 100,
+        "checkpoint_path": './checkpoints/',
+        "load_checkpoint": True,
+        "load_checkpoint_path": './checkpoints/18-04-2022 11:19:48/model_18-04-2022 11:19:48_20',
+        "optimizer": "adam",
         "tf_init": 0, 
         "tf_decay": 0.5
     }
@@ -92,10 +90,17 @@ if __name__ == "__main__":
     Toggle save_imgs to True to save imgs to an imgs directory which will be created if it doesn't exist: imgs/
     '''
     # hp = find_best_parameters(20, model, train, val, test, device)
-    ho = {'calc_acc_every': 4, 'batch_size': 64, 'learning_rate': 0.001020977066089074, 'weight_decay': 0.000, 'momentum': 0.000, 'num_epochs': 20}
-    train_model(model, train, val, test, 
-        device=device, train_opts=ho, show_plts=False, save_imgs=False)
-    # train_model(model, train, val, test, 
-    #     device=device, train_opts=train_opts, show_plts=False, save_imgs=False)
+    ho = {'calc_acc_every': 4, 'batch_size': 64, 'learning_rate': 0.001020977066089074,
+          'weight_decay': 0.000, 'momentum': 0.000, 'num_epochs': 20}
+    train_opts.update(ho)
 
-        
+    # train_model(model, train, val, test,
+    #             device=device, train_opts=train_opts, show_plts=False, save_imgs=False)
+    #
+
+    # needed to load pickle file.
+    # from data_cleaning import WordIdMapping
+    # data_mapping = pickle.load(open('./processed_data/mapping.pkl', 'rb'))
+    # find_correct_classifications(model, opts=train_opts, device=device, word_mapping=data_mapping)
+
+

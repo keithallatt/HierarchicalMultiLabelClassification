@@ -6,7 +6,7 @@ A variety of utility functions such as loading and saving to pickle files, and c
 Author(s): Keith Allatt,
 """
 import datetime
-from typing import Union
+from typing import Union, List
 from unicodedata import category
 from data_cleaning import csv_pt_pairs
 from random import random
@@ -28,6 +28,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import truncnorm as tn
 from scipy.stats import randint as randint
+from data_cleaning import WordIdMapping
 
 # number of labels used in multi-label classification
 NUM_LABELS = 3 # l1,l2,l3
@@ -118,7 +119,7 @@ def to_one_hot(z: torch.tensor, d: int, device="cpu") -> torch.tensor:
     return torch.eye(d)[z].to(device)
 
 
-def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_total: int = None, device="cpu") -> Union[str, list[float]]:
+def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_total: int = None, device="cpu") -> Union[str, List[float]]:
     """
     Calculate per-category and total accuracies for a given model and dataset.
 
@@ -168,7 +169,6 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     return acc_str if str_repr else accuracies
 
 
-
 def estimate_accuracy(model: nn.Module, data: Dataset, device="cpu") -> float:
     """
     Estimate accuracy using 2000 data points.
@@ -206,7 +206,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
         if model.train_lock:
             print("Model is locked. Please unlock the model to train.")
 
-    if load_checkpoint and load_checkpoint_path: # load_checkpoint path is path to checkpointed model parameters
+    if load_checkpoint and load_checkpoint_path:  # load_checkpoint path is path to checkpointed model parameters
         print("checkpointed model loaded!")
         model.load_state_dict(torch.load(load_checkpoint_path, map_location=torch.device(device)))
 
@@ -268,7 +268,7 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
                 tf_labs = ts if random() <= tf_prob else None
                 preds = model(xs, true_labs=tf_labs)
 
-                loss_sum = 0 # sum of l1+l2+l3 losses 
+                loss_sum = 0  # sum of l1+l2+l3 losses
 
                 for i, d in enumerate(model.output_sizes):
                     # per category mini-batch loss
@@ -354,8 +354,6 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
         model.training_iterations = n_batch
 
     return its, its_sub, losses, train_accs, val_accs
-    
-
 
 
 def gen_category_loss_plots(its, losses, save_imgs):
@@ -371,6 +369,7 @@ def gen_category_loss_plots(its, losses, save_imgs):
         if save_imgs:
             loss_fig.savefig(img_dir + f"l{i+1}_loss.png")
         loss_fig.show()
+
 
 def gen_category_acc_plots(its_sub, train_accs, val_accs, save_imgs):
     '''
@@ -390,7 +389,8 @@ def gen_category_acc_plots(its_sub, train_accs, val_accs, save_imgs):
 
 
 def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x,
-                outfile="model.pickle", train_opts=None, device="cpu", show_category_stats=True, show_plts=False, **kwargs):
+                train_opts=None, device="cpu", show_category_stats=True,
+                show_plts=False, **kwargs):
 
     # can specify data_loader, by default, the identify function x -> x. Acts like a preprocessor.
     training_dataset = data_loader(train_data)
@@ -399,7 +399,6 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
 
     if train_opts is None:
         train_opts = dict()
-
 
     its, its_sub, losses, train_accs, val_accs = train(model, training_dataset, validation_dataset,
                                                      device=device, **train_opts)
@@ -412,7 +411,7 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
         if not os.path.exists(img_dir):
             os.makedirs(img_dir)
     # with open(outfile, 'wb') as file:
-    #     pickle.dump(obj, file)
+    #     pickle.dump(model, file)
 
     
     loss_fig, train_fig = None, None
@@ -477,7 +476,6 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
                     "Final L3 Validation Accuracy: {}".format(val_accs[2][-1])  
          print(str_repr)
 
-
     if test_data is not None:
         print("-" * 30)
         str_repr_test_acc = get_accuracy(model, testing_dataset, str_repr=True, device=device)
@@ -524,12 +522,15 @@ def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"
         summary, doc_embedding = docs
         label_text, label_emb = labs
 
-        output = model(doc_embedding)
+        doc_embedding = doc_embedding.reshape((1, doc_embedding.shape[0]))
 
+        output = model(doc_embedding)
+        output_ids = []
         corrects = []
         for i in range(len(model.output_sizes)):
             pred = output[i].max(1, keepdim=True)[1]
             corrects.append(pred.eq(label_emb[i].view_as(pred)))
+            output_ids.append(int(pred))
 
         is_example = True
 
@@ -540,7 +541,72 @@ def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"
                 is_example = False
 
         if is_example:
-            return summary, label_emb, output
+            return summary, label_emb, output_ids
+
+    return None, None, None
+
+
+def find_correct_classifications(model, opts, device, word_mapping: WordIdMapping, dataset="test"):
+    """
+    Find appropriate examples to show where the model is successful and not successful.
+
+    Ideally, we would like to find a successful and unsuccessful examples at the l1, l2,
+    and l3 levels individually, and an example of a perfect classification, and one where
+    all 3 classifications are incorrect.
+    :param word_mapping:
+
+    """
+    load_checkpoint = opts.get("load_checkpoint", False)
+    load_checkpoint_path = opts.get("load_checkpoint_path", None)
+
+    if load_checkpoint and load_checkpoint_path:  # load_checkpoint path is path to checkpointed model parameters
+        print("checkpointed model loaded!")
+        model.load_state_dict(torch.load(load_checkpoint_path, map_location=torch.device(device)))
+
+    example_parameters = [
+    ]
+
+    for i in range(3):
+        p = [False, False, False, False]
+        p[i] = True
+        example_parameters.append(tuple(p))
+        p[-1] = True
+        example_parameters.append(tuple(p))
+
+    example_parameters.append((True, True, True, False))
+    example_parameters.append((True, True, True, True))
+
+    printed_results = [r"### Classifications"]
+
+    for parameter in example_parameters:
+        doc_sum, labels, predictions = find_example(model, *parameter, dataset=dataset)
+        l1, l2, l3, matches = parameter
+
+        levels_at = [
+            f'L{i+1}' for i, l in zip(range(3), [l1, l2, l3]) if l
+        ]
+
+        printed_results.append("---")
+
+        levels_at = ", ".join(levels_at) + " " + ("levels" if len(levels_at) > 1 else 'level')
+
+        printed_results.append(f"Here is a summary that our model {'correctly' if matches else 'incorrectly'} classifies at the {levels_at}.\n")
+
+        printed_results.append("```\n"+doc_sum+"\n```")  # add code brackets in MD
+
+        for i in range(3):
+            if [l1, l2, l3][i]:
+                correct_label = word_mapping.get_word_from_id(i, int(labels[i]))
+                if matches:
+                    printed_results.append(f"At the L{i+1} level, the correct label is {correct_label}, "
+                                           f"and our AI correctly predicted this.")
+                else:
+                    prediction_label = word_mapping.get_word_from_id(i, predictions[i])
+                    printed_results.append(f"At the L{i+1} level, the correct label is {correct_label},"
+                                           f" but our AI predicted {prediction_label}.")
+
+    return "\n\n".join(printed_results)
+
 
 def generate_hyperparameters():
     """ Using random search, generate values for hyperparameters
@@ -564,6 +630,7 @@ def generate_hyperparameters():
     hp["batch_size"] = int(hp["batch_size"])
     print("-" * 30)
     return hp
+
 
 def find_best_parameters(num_of_models, model, train, val, test, device):
     models = []
@@ -603,6 +670,7 @@ def find_best_parameters(num_of_models, model, train, val, test, device):
     print(f"Hyperparameters resulting in the highest validation accuracy are {models[best]}")
     print(f"Test accuracy of this model is: {test_scores[best]}")
     return models[best]
+
 
 if __name__ == "__main__":
     # print(find_example(None))
