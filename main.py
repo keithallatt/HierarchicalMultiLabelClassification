@@ -1,7 +1,8 @@
 """
 main.py
 
-:)
+This is where model training is done. Note that train_model() in utilities.py is where our main
+training function is defined.
 """
 from unicodedata import category
 import torch
@@ -19,7 +20,7 @@ if __name__ == "__main__":
 
 
     # how much data to load
-    train_obs = 120000
+    train_obs = 40000
     val_obs = 36003
     test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -93,10 +94,9 @@ if __name__ == "__main__":
     ho = {'calc_acc_every': 4, 'batch_size': 64, 'learning_rate': 0.001020977066089074,
           'weight_decay': 0.000, 'momentum': 0.000, 'num_epochs': 14}
     train_opts.update(ho)
-
-    train_model(model, train, val, test,
-                device=device, train_opts=train_opts, show_plts=False, save_imgs=False)
-    #
+    
+    # train_model(model, train, val, test,
+    #             device=device, train_opts=train_opts, show_plts=False, save_imgs=False)
 
     # needed to load pickle file.
     # from data_cleaning import WordIdMapping
