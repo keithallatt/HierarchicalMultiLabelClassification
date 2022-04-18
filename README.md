@@ -338,10 +338,10 @@ Our final model uses the hyperparameters discussed in the Hyperparameter Tuning 
 
 <div class="row">
   <div class="column">
-    <img src="final_model_stats/total_loss.png" alt="Snow" width="40%">
+    <img src="final_model_stats/total_loss.png" width="40%">
   </div>
   <div class="column">
-    <img src="final_model_stats/total_accuracy.png" alt="Forest" width="40%" >
+    <img src="final_model_stats/total_accuracy.png" width="40%">
   </div>
 </div>
 
@@ -393,7 +393,16 @@ Lastly, as can be seen from the "Overfitting to a Small Dataset" table in the pr
 [5] https://arxiv.org/pdf/1503.08581.pdf
 
 
-#### Authored by: Keith Allatt, Brandon Jaipersaud, David Chen, Renato Zimmermann
+## Task Distribution
+
+Keith Allatt
+
+Brandon Jaipersaud
+
+David Chen
+
+Renato Zimmermann
+
 
 
 ---
