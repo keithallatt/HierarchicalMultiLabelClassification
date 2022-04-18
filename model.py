@@ -1,3 +1,16 @@
+"""
+model.py
+
+Defines:
+
+dataset object: DBPedia
+decoder implementations: HierarchicalRNN, BaselineMLP
+encoder implementation: EncoderRNN
+
+Note that our primary/final model uses the HierarchicalRNN decoder paired with a BERT encoder used
+in process_documents() in data_cleaning.py.
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F

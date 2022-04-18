@@ -3,6 +3,9 @@ data_cleaning.py
 
 Load the data, extract the relevant information from the csv files to create a more easily parsable file.
 
+The encoder portion of our model is in process_documents(). This is where the article gets transformed to a
+BERT embedding.
+
 Author(s): Keith Allatt, Renato Zimmermann
 """
 import csv

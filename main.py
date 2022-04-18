@@ -1,7 +1,8 @@
 """
 main.py
 
-:)
+This is where model training is done. Note that train_model() in utilities.py is where our main
+training function is defined.
 """
 from unicodedata import category
 import torch

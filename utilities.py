@@ -3,7 +3,9 @@ utilities.py
 
 A variety of utility functions such as loading and saving to pickle files, and calculating accuracies and such.
 
-Author(s): Keith Allatt,
+Our model training function is defined here as well.
+
+Author(s): Keith Allatt, Brandon Jaipersaud 
 """
 import datetime
 from typing import Union, List
