@@ -35,62 +35,6 @@ class DBPedia(Dataset):
         return self.embs[idx], self.labs[idx]
 
 
-class BaselineMLP(nn.Module):
-    """Baseline model to compare against the proposed solution."""
-
-    def __init__(self, input_size: int, output_sizes: tuple,
-                 clf_size_mults: tuple = (1,)):
-        """Initialize baseline model.
-
-        input_size: size of input
-        output_size: size of output
-        clf_size_mults: size of hidden layers as a multiple of the size of the
-            last layer.
-        """
-
-        super(BaselineMLP, self).__init__()
-
-        self.output_sizes = output_sizes
-        self.classifier_fcs = nn.ModuleList()
-
-        for fc_out_size in output_sizes:
-            self.classifier_fcs.append(
-                make_layer_mult_mlp(input_size, fc_out_size, clf_size_mults)
-            )
-
-    def forward(self, doc_emb: torch.tensor):
-
-        in_data = doc_emb
-        preds = list()
-        for clf_fc in self.classifier_fcs:
-
-            clf = clf_fc(in_data)
-            clf = torch.squeeze(clf, dim=0)
-
-            preds.append(clf)
-
-        return preds
-
-
-class EncoderRNN(nn.Module):
-    """Simple RNN encoder used for comparisson with BERT encoder.
-    """
-
-    def __init__(self, input_size=50, hidden_size=768):
-        """Initialize model.
-        """
-        super(EncoderRNN, self).__init__()
-        self.emb = nn.Embedding.from_pretrained(glove.vectors)
-        self.hidden_size = hidden_size
-        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
-
-    def forward(self, x):
-        # Look up the embedding
-        x = self.emb(x)
-        # Forward propagate the RNN
-        out, last_hidden = self.rnn(x)
-        return last_hidden
-
 
 class HierarchicalRNN(nn.Module):
     """Proposed hierarchical prediction RNN."""
@@ -174,13 +118,75 @@ class HierarchicalRNN(nn.Module):
 
 
 
+'''
+Below are 2 models (an encoder and a decoder) used for comparing against our main encoder-decoder model. 
+They are discussed under the Benchmarking section of the README.md
+'''
+
+
+class BaselineMLP(nn.Module):
+    """Baseline MLP decoder to compare against our main decoder:HierarchicalRNN ."""
+
+    def __init__(self, input_size: int, output_sizes: tuple,
+                 clf_size_mults: tuple = (1,)):
+        """Initialize baseline model.
+
+        input_size: size of input
+        output_size: size of output
+        clf_size_mults: size of hidden layers as a multiple of the size of the
+            last layer.
+        """
+
+        super(BaselineMLP, self).__init__()
+
+        self.output_sizes = output_sizes
+        self.classifier_fcs = nn.ModuleList()
+
+        for fc_out_size in output_sizes:
+            self.classifier_fcs.append(
+                make_layer_mult_mlp(input_size, fc_out_size, clf_size_mults)
+            )
+
+    def forward(self, doc_emb: torch.tensor):
+
+        in_data = doc_emb
+        preds = list()
+        for clf_fc in self.classifier_fcs:
+
+            clf = clf_fc(in_data)
+            clf = torch.squeeze(clf, dim=0)
+
+            preds.append(clf)
+
+        return preds
+
+
+class EncoderRNN(nn.Module):
+    """Simple RNN encoder used for comparison with BERT encoder.
+    """
+
+    def __init__(self, input_size=50, hidden_size=768):
+        """Initialize model.
+        """
+        super(EncoderRNN, self).__init__()
+        self.emb = nn.Embedding.from_pretrained(glove.vectors)
+        self.hidden_size = hidden_size
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+
+    def forward(self, x):
+        # Look up the embedding
+        x = self.emb(x)
+        # Forward propagate the RNN
+        out, last_hidden = self.rnn(x)
+        return last_hidden
+
 
 
 
 
 
 if __name__ == "__main__":
-    """Perform model tests"""
+    """Perform model debugging and testing."""
 
     import numpy as np
     from transformers import BertTokenizer, BertModel
