@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
 
     # how much data to load
-    train_obs = 100
+    train_obs = 40000
     val_obs = 36003
     test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")

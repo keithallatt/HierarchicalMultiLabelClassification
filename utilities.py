@@ -632,8 +632,8 @@ def find_correct_classifications(model, opts, device, word_mapping: WordIdMappin
 
 
 def generate_hyperparameters():
-    """ Using random search, generate values for hyperparameters
-    based on a Gaussian distribution.
+    """Generate values for hyperparameters
+    based on a truncated Gaussian distribution.
     """
     hp = {"calc_acc_every":4, "num_epochs": 10}
 
@@ -655,29 +655,34 @@ def generate_hyperparameters():
     return hp
 
 
-def find_best_parameters(num_of_models, model, train, val, test, device):
+def find_best_parameters(num_of_models, model, train, val, test, device, grid_search=False):
+    """Generate num_of_models models with hyperparameter values from generate_hyperparameters(). 
+    Train each model using train dataset and assess performance with val dataset to find the best
+    hyperparameters among the models.
+    """
     models = []
     val_scores, test_scores = [], []
     hp = {"calc_acc_every":4, "batch_size": 64, "num_epochs": 10}
 
     # Some possible grid search values
-    # learning_rate = [0.001, 0.01, 0.1]
-    # weight_decay = [0.0, 0.01, 0.1]
-    # momentum = [0, 0.5, 1]
+    if grid_search:
+        learning_rate = [0.001, 0.01, 0.1]
+        weight_decay = [0.0, 0.01, 0.1]
+        momentum = [0, 0.5, 1]
 
-    # for r in learning_rate:
-    #     for w in weight_decay:
-    #         for m in momentum:
-    #             hp["learning_rate"] = r
-    #             hp["weight_decay"] = w
-    #             hp["momentum"] = m
-    #             print(f"Parameters: {r}, {w}, {m}")
-    #             models.append(hp)
-    #             a, b = train_model(model, train, val, test,
-    #                 device=device, train_opts=hp, show_plts=False, save_imgs=False)
-    #             val_scores.append(a)
-    #             test_scores.append(b.split("\n")[0])
-    #             print("-" * 30)
+        for r in learning_rate:
+            for w in weight_decay:
+                for m in momentum:
+                    hp["learning_rate"] = r
+                    hp["weight_decay"] = w
+                    hp["momentum"] = m
+                    print(f"Parameters: {r}, {w}, {m}")
+                    models.append(hp)
+                    a, b = train_model(model, train, val, test,
+                        device=device, train_opts=hp, show_plts=False, save_imgs=False)
+                    val_scores.append(a)
+                    test_scores.append(b.split("\n")[0])
+                    print("-" * 30)
 
     for i in range(num_of_models):
         print(f"Training model with hyperparameters {i}")
