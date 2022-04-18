@@ -2,15 +2,10 @@
 gen_small_datasets.py
 
 Generates three datasets to test the ability for the model to predict l1,l2,l3 classes.
-Does it learn the l1-l2-l3 dependencies correctly?
+Helps to answer the question: Does the model learn the l1-l2-l3 dependencies correctly?
 
-l1: can the model predict l1 classes
-
-given l1 class (i.e agent), can the model predict l2 classes?
-
-given l1,l2 classes can the model predict l3 classes?
-
-
+Ex. Suppose the model is trained on a dataset containing only Agents (l1 label). Does it
+accurately predict l2 labels in the validation set given the article is an Agent?
 
 Author(s): Brandon Jaipersaud
 """
@@ -18,14 +13,8 @@ Author(s): Brandon Jaipersaud
 import csv
 import pickle
 
-
-
 '''
-Agent -> 
-
-check how well model performs with predicting different types of agents
-
-filter train, val, test to only contain agents
+A dataset to test how well model performs with predicting different types of agents
 '''
 def gen_l2(file_path, num_instances=1000, l1_label="Agent"):
     small_l2_path = "../DBPEDIA_train_small_l2.csv"
