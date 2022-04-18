@@ -25,52 +25,6 @@ class DBPedia(Dataset):
 
 
 
-class BaselineMLP(nn.Module):
-
-    def __init__(self, input_size: int, output_sizes: tuple,
-                 clf_size_mults: tuple = (1,)):
-
-        super(BaselineMLP, self).__init__()
-
-        self.output_sizes = output_sizes
-        self.classifier_fcs = nn.ModuleList()
-
-        for fc_out_size in output_sizes:
-            self.classifier_fcs.append(
-                make_layer_mult_mlp(input_size, fc_out_size, clf_size_mults)
-            )
-
-    def forward(self, doc_emb: torch.tensor):
-
-        in_data = doc_emb
-        preds = list()
-        for clf_fc in self.classifier_fcs:
-
-            clf = clf_fc(in_data)
-            clf = torch.squeeze(clf, dim=0)
-
-            preds.append(clf)
-           
-
-        return preds
-
-
-class EncoderRNN(nn.Module):
-    def __init__(self, input_size=50, hidden_size=768):
-        super(EncoderRNN, self).__init__()
-        self.emb = nn.Embedding.from_pretrained(glove.vectors)
-        self.hidden_size = hidden_size
-        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
-    
-    def forward(self, x):
-        # Look up the embedding
-        x = self.emb(x)
-        # Forward propagate the RNN
-        out, last_hidden = self.rnn(x)
-        return last_hidden
-
-
-
 class HierarchicalRNN(nn.Module):
 
     def __init__(self, input_size: int, emb_size: int, output_sizes: tuple,
@@ -124,6 +78,54 @@ class HierarchicalRNN(nn.Module):
             last_hidden = hid
 
         return preds
+
+
+class BaselineMLP(nn.Module):
+
+    def __init__(self, input_size: int, output_sizes: tuple,
+                 clf_size_mults: tuple = (1,)):
+
+        super(BaselineMLP, self).__init__()
+
+        self.output_sizes = output_sizes
+        self.classifier_fcs = nn.ModuleList()
+
+        for fc_out_size in output_sizes:
+            self.classifier_fcs.append(
+                make_layer_mult_mlp(input_size, fc_out_size, clf_size_mults)
+            )
+
+    def forward(self, doc_emb: torch.tensor):
+
+        in_data = doc_emb
+        preds = list()
+        for clf_fc in self.classifier_fcs:
+
+            clf = clf_fc(in_data)
+            clf = torch.squeeze(clf, dim=0)
+
+            preds.append(clf)
+           
+
+        return preds
+
+
+class EncoderRNN(nn.Module):
+    def __init__(self, input_size=50, hidden_size=768):
+        super(EncoderRNN, self).__init__()
+        self.emb = nn.Embedding.from_pretrained(glove.vectors)
+        self.hidden_size = hidden_size
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+    
+    def forward(self, x):
+        # Look up the embedding
+        x = self.emb(x)
+        # Forward propagate the RNN
+        out, last_hidden = self.rnn(x)
+        return last_hidden
+
+
+
 
 
 if __name__ == "__main__":
