@@ -356,7 +356,10 @@ The accuracies can be ranked as follows: L1 > L2 > L3. This is because of the va
 
 
 
-
+## Advanced Concepts Implemented
+- transformer (i.e. our BERT encoder)
+- encoder-decoder architecture
+- teacher forcing
 
 
 ## References
