@@ -1,5 +1,6 @@
 '''
-An alternate encoder used to benchmark against the main BERT encoder in data_cleaning.py
+An alternate encoder used for benchmarking against the main BERT encoder in data_cleaning.py
+
 Author: Brandon Jaipersaud
 '''
 
@@ -28,7 +29,6 @@ validation_data = Path("./dbpedia_data/DBPEDIA_val.csv")
 testing_data = Path("./dbpedia_data/DBPEDIA_test.csv")
 
 
-
 glove = torchtext.vocab.GloVe(name="6B", dim=50)
 glove_emb = nn.Embedding.from_pretrained(glove.vectors)
 
@@ -37,6 +37,11 @@ MAX_MEMORY = 10000
 
 NUM_POINTS = 5000
 
+
+
+'''
+Truncate document to DOC_LENGTH words and use GloVe embeddings to encode each word
+'''
 def parse_doc(doc):
     
     parsed_doc = []
@@ -64,6 +69,10 @@ def parse_doc(doc):
     else:
         return parsed_doc
 
+
+'''
+Encodes the document using GloVe embeddings + GRU
+'''
 def convert_to_embedding(doc):
     doc = parse_doc(doc)
    
@@ -76,7 +85,10 @@ def convert_to_embedding(doc):
         return emb
         
        
-    
+'''
+Analogous to process_documents in data_cleaning.py. The only difference is convert_to_embedding()
+which encodes the document using GloVe embeddings + GRU
+'''
 def process_documents(data_files,
                       emb_suffix="_alt_embeddings_gru.pt",
                       lab_suffix="_alt_labels_gru.pt",
@@ -98,10 +110,9 @@ def process_documents(data_files,
             emb_list_size = 0
             for doc, labs in tqdm(doc_gen):
                 lab_ids = map_data.add_and_get(labs)
-                emb = convert_to_embedding(doc) # 1x768
+                emb = convert_to_embedding(doc) # shape = 1x768
                 
                 if torch.is_tensor(emb):
-                    #print(emb.shape)
                     num_saved_points += 1
                     emb_list.append(emb.squeeze())
                     lab_list.append(torch.tensor(lab_ids))
@@ -121,8 +132,6 @@ def process_documents(data_files,
 
 
 if __name__ == '__main__':
-    
-   # print(glove.stoi["the "])
    
     process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
                       for name in ["train"]])
