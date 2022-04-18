@@ -335,25 +335,13 @@ To further test if our model correctly learns the dependencies between different
 
 Our final model uses the hyperparameters discussed in the Hyperparameter Tuning section. It was trained on 12,0000 points from the training set for 14 epochs. Below are the loss and accuracy curves computed across all 3 categories: L1, L2 and L3. To avoid cluttering the report, we have omitted including the per-category curves since they look nearly identical to the cross-category curves. However, we have included them all in final_model_stats/.    
 
-<style>
-  .column {
-    float: left;
-    width: 30%;
-  }
-
-  .row::after {
-    content: "";
-    clear: both;
-    display: table;
-  }
-</style>
 
 <div class="row">
   <div class="column">
-    <img src="final_model_stats/total_loss.png" alt="Snow" ">
+    <img src="final_model_stats/total_loss.png" alt="Snow" width="40%">
   </div>
   <div class="column">
-    <img src="final_model_stats/total_accuracy.png" alt="Forest" ">
+    <img src="final_model_stats/total_accuracy.png" alt="Forest" width="40%" >
   </div>
 </div>
 
