@@ -413,8 +413,8 @@ Renato Zimmermann
 - rescale model diagram so it looks good on main Github page
 - can add Latex support to model explanations (i.e. L subscript 1 instead of L1)
 - highlight where GRU parameters come from in the model parameters section
-- change multi-label classification to hierarchical multi-class classification
 - include graph in intro which highlights the difference between standard multi-class classification
 and our hierarchical multi-label classification
+- add in RNNEncoder model
 
 
