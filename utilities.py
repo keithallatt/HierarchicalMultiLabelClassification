@@ -33,7 +33,7 @@ from data_cleaning import WordIdMapping
 # number of labels used in multi-label classification
 NUM_LABELS = 3 # l1,l2,l3
 
-# new directory to store learning curve and loss images 
+# new directory to store learning curve and loss images
 img_dir = "./imgs/" + datetime.now().strftime("%d-%m-%Y %H:%M:%S") + "/"
 
 
@@ -134,9 +134,9 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
 
     model.eval()  # annotation for evaluation; sets dropout and batch norm for evaluation.
 
-    num_points = 0 
+    num_points = 0
     category_correct = np.asarray([0,0,0,0]) # number of l1,l2,l3,total correct predictions
-   
+
 
     for xs, ts in dataloader: # grab a batch of data
 
@@ -149,7 +149,7 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
             num_correct = pred.eq(ts[:,i].view_as(pred)).sum().item()
             category_correct[i] += num_correct # update per category correct predictions
             category_correct[NUM_LABELS] += num_correct # update total correct predictions across categories
-           
+
         xs.detach(), ts.detach()
 
         if max_total is not None and num_points > max_total:
@@ -158,14 +158,14 @@ def get_accuracy(model: nn.Module, data: Dataset, str_repr: bool = False, max_to
     num_points_across_categories = num_points * NUM_LABELS
     accuracies = category_correct[0:NUM_LABELS] / num_points # per category accuracies
     accuracies = np.append(accuracies, category_correct[-1] / num_points_across_categories) # add accuracy across all categories
-  
 
-    acc_str = (f"Total : ({category_correct[-1]} / {num_points_across_categories}) {accuracies[-1]}\n" 
-               f"L1 : ({category_correct[0]} / {num_points}) {accuracies[0]}\n"  
-               f"L2 : ({category_correct[1]} / {num_points}) {accuracies[1]}\n"   
-               f"L3 : ({category_correct[2]} / {num_points}) {accuracies[2]}")   
-    
-           
+
+    acc_str = (f"Total : ({category_correct[-1]} / {num_points_across_categories}) {accuracies[-1]}\n"
+               f"L1 : ({category_correct[0]} / {num_points}) {accuracies[0]}\n"
+               f"L2 : ({category_correct[1]} / {num_points}) {accuracies[1]}\n"
+               f"L3 : ({category_correct[2]} / {num_points}) {accuracies[2]}")
+
+
     return acc_str if str_repr else accuracies
 
 
@@ -193,12 +193,19 @@ def make_layer_mult_mlp(input_size: int, output_size: int, layer_multiples: tupl
 
 
 # MODEL TRAINING FUNCTIONS @ KEITH.ALLATT, RENATO.ZIMMERMANN
-def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, weight_decay=0.0, momentum=0.9, 
+def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, weight_decay=0.0, momentum=0.9,
           num_epochs=7, calc_acc_every=0, max_iterations=100_000, shuffle=True, train_until=1.0, tf_init=1, tf_decay=0.5,
-          checkpoint_path=None, load_checkpoint=False, load_checkpoint_path=None, checkpoint_frequency=4, 
+          checkpoint_path=None, load_checkpoint=False, load_checkpoint_path=None, checkpoint_frequency=4,
           optimizer="adam", device="cpu"):
     """
     Train a model.
+
+    Arguments:
+        calc_acc_every: number of batches between complete accuracy
+            calculations.
+        train_until: training accuracy threshold for early stopping.
+        tf_init: initial teacher forcing probability.
+        tf_decay: teacher forcing decay.
     """
 
     # can add a train_lock attribute to a model to prevent the train function from making changes.
@@ -236,8 +243,8 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
                                weight_decay=weight_decay)
 
     its, its_sub = [], []
-  
-    
+
+
     # track per-category loss and accuracies
     # Ex. losses[0] = L1 losses, losses[1] = L2 losses, losses[NUM_LABELS] = losses across all categories
     losses = [[], [], [], []]
@@ -274,13 +281,13 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
                     # per category mini-batch loss
                     # note that criterion() computes avg loss by default
                     loss = criterion(preds[i], to_one_hot(ts[:,i], d, device=device))
-                   
+
                     loss_sum += loss
                     losses[i].append(float(loss))  # avg loss per category
 
-                
+
                 losses[NUM_LABELS].append(float(loss_sum) / NUM_LABELS) # avg loss across all categories
-            
+
                 xs.detach(), ts.detach()
 
                 loss_sum.backward()
@@ -288,18 +295,18 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
                 optimizer.zero_grad()
 
                 its.append(n_batch)
-              
+
                 n_batch += 1
                 n_train += xs.shape[0]
 
                 if calc_acc_every != 0 and n_batch % calc_acc_every == 0:
                     its_sub.append(n_batch)
-                   
+
                     # returns an array of per category + total accuracies
                     batch_train_accs = get_accuracy(model, train_data, device=device)
                     batch_val_accs = get_accuracy(model, valid_data, device=device)
-                 
-            
+
+
                     for i in range(NUM_LABELS+1):
                         train_accs[i].append(batch_train_accs[i])
                         val_accs[i].append(batch_val_accs[i])
@@ -329,14 +336,14 @@ def train(model, train_data, valid_data, batch_size=64, learning_rate=0.001, wei
                 torch.save(model.state_dict(),
                             checkpoint_path + f"model_{check_prefix}_{epoch+1}")
 
-    
+
     except KeyboardInterrupt:
         n = len(val_accs[0])
         its = its[:n]
         its_sub = its_sub[:n]
         losses = [category[:n] for category in losses]
         train_accs = [category[:n] for category in train_accs]
-        
+
 
     # what is this for?
     if not train_accs:
@@ -391,6 +398,16 @@ def gen_category_acc_plots(its_sub, train_accs, val_accs, save_imgs):
 def train_model(model, train_data, valid_data, test_data=None, data_loader=lambda x: x,
                 train_opts=None, device="cpu", show_category_stats=True,
                 show_plts=False, **kwargs):
+    """Train model and process training data.
+
+    data_loader: callable that performs any necessary processing on the input
+        data.
+    train_opts: dictionary of keyword arguments for the train method.
+    show_category_stats: whether to show granular statistics on the results for
+        each hierarchical category.
+    show_plts: whether to show fitting curves.
+    kwargs: additional ketword arguments. Mostly paths for saving results.
+    """
 
     # can specify data_loader, by default, the identify function x -> x. Acts like a preprocessor.
     training_dataset = data_loader(train_data)
@@ -413,7 +430,7 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
     # with open(outfile, 'wb') as file:
     #     pickle.dump(model, file)
 
-    
+
     loss_fig, train_fig = None, None
     if show:
         if len(its) > 1:
@@ -426,12 +443,12 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
 
                 if save_imgs:
                     loss_fig.savefig(img_dir + "total_loss.png")
-                        
+
                 loss_fig.show()
 
                 if show_category_stats:
                     gen_category_loss_plots(its, losses, save_imgs)
-                    
+
             except ValueError:
                 print("Loss curve unavailable")
                 print(len(its), len(losses))
@@ -465,15 +482,15 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
         str_repr = "Final Training Accuracy Across All Categories: {}\n".format(train_accs[-1][-1]) + \
                    "Final L1 Training Accuracy: {}\n".format(train_accs[0][-1]) + \
                    "Final L2 Training Accuracy: {}\n".format(train_accs[1][-1]) + \
-                   "Final L3 Training Accuracy: {}".format(train_accs[2][-1])    
-            
+                   "Final L3 Training Accuracy: {}".format(train_accs[2][-1])
+
         print(str_repr)
         print("-" * 30)
     if val_accs:
          str_repr = "Final Validation Accuracy Across All Categories: {}\n".format(val_accs[-1][-1]) + \
                     "Final L1 Validation Accuracy: {}\n".format(val_accs[0][-1]) + \
                     "Final L2 Validation Accuracy: {}\n".format(val_accs[1][-1]) + \
-                    "Final L3 Validation Accuracy: {}".format(val_accs[2][-1])  
+                    "Final L3 Validation Accuracy: {}".format(val_accs[2][-1])
          print(str_repr)
 
     if test_data is not None:
@@ -492,10 +509,14 @@ def train_model(model, train_data, valid_data, test_data=None, data_loader=lambd
 
 
 def _tot_params_helper(model):
+    """Helper to get total number of tunable parameters in a model.
+    """
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
 def get_param_sizes(model):
+    """Get the number of tunable parameters in a HierarchicalRNN model.
+    """
     ret = dict()
     ret["RNN"] = _tot_params_helper(model.rnn)
     for i in range(len(model.embedding_fcs)):
@@ -610,7 +631,7 @@ def find_correct_classifications(model, opts, device, word_mapping: WordIdMappin
 
 def generate_hyperparameters():
     """ Using random search, generate values for hyperparameters
-    based on a Gaussian distribution. 
+    based on a Gaussian distribution.
     """
     hp = {"calc_acc_every":4, "num_epochs": 10}
 
@@ -626,7 +647,7 @@ def generate_hyperparameters():
             value = tn(a=parameters[p][0], b=parameters[p][1], scale=1).rvs(size=1)
         print(f"parameter: {p}, value: {value[0]}")
         hp[p] = value[0]
-    
+
     hp["batch_size"] = int(hp["batch_size"])
     print("-" * 30)
     return hp
@@ -650,7 +671,7 @@ def find_best_parameters(num_of_models, model, train, val, test, device):
     #             hp["momentum"] = m
     #             print(f"Parameters: {r}, {w}, {m}")
     #             models.append(hp)
-    #             a, b = train_model(model, train, val, test, 
+    #             a, b = train_model(model, train, val, test,
     #                 device=device, train_opts=hp, show_plts=False, save_imgs=False)
     #             val_scores.append(a)
     #             test_scores.append(b.split("\n")[0])
@@ -660,12 +681,12 @@ def find_best_parameters(num_of_models, model, train, val, test, device):
         print(f"Training model with hyperparameters {i}")
         hp = generate_hyperparameters()
         models.append(hp)
-        a, b = train_model(model, train, val, test, 
+        a, b = train_model(model, train, val, test,
                     device=device, train_opts=hp, show_plts=False, save_imgs=False)
         val_scores.append(a)
         test_scores.append(b.split("\n")[0])
         print("-" * 30)
-    
+
     best = val_scores.index(max(val_scores))
     print(f"Hyperparameters resulting in the highest validation accuracy are {models[best]}")
     print(f"Test accuracy of this model is: {test_scores[best]}")
