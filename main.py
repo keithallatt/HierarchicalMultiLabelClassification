@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
 
     # how much data to load
-    train_obs = 100
+    train_obs = 120000
     val_obs = 36003
     test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     train_opts = {
         "calc_acc_every": 4,
         "num_epochs": 100,
-        # "checkpoint_path": './checkpoints/',
+        "checkpoint_path": './checkpoints/',
         # "load_checkpoint": True,
         # "load_checkpoint_path": './checkpoints/18-04-2022 11:19:48/model_18-04-2022 11:19:48_20',
         "optimizer": "adam",
@@ -91,11 +91,11 @@ if __name__ == "__main__":
     '''
     # hp = find_best_parameters(20, model, train, val, test, device)
     ho = {'calc_acc_every': 4, 'batch_size': 64, 'learning_rate': 0.001020977066089074,
-          'weight_decay': 0.000, 'momentum': 0.000, 'num_epochs': 20}
+          'weight_decay': 0.000, 'momentum': 0.000, 'num_epochs': 14}
     train_opts.update(ho)
 
-    # train_model(model, train, val, test,
-    #             device=device, train_opts=train_opts, show_plts=False, save_imgs=False)
+    train_model(model, train, val, test,
+                device=device, train_opts=train_opts, show_plts=False, save_imgs=False)
     #
 
     # needed to load pickle file.
