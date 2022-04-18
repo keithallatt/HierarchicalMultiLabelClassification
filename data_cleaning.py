@@ -29,6 +29,7 @@ training_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l1.csv")
 validation_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l2.csv")
 testing_data_small = Path("./dbpedia_data/DBPEDIA_train_small_l3.csv")
 
+
 class WordIdMapping:
     def __init__(self, n_levels):
         self.n_levels = n_levels
@@ -52,6 +53,9 @@ class WordIdMapping:
     def add_and_get(self, words):
         self.add_set(words)
         return self.get_word_set(words)
+
+    def get_word_from_id(self, level, _id):
+        return self.id_to_word[level][_id]
 
 
 def csv_file_generator(infile: Union[str, Path]) -> Generator[tuple, None, None]:
