@@ -188,6 +188,12 @@ def process_documents(data_files,
 
 
 def csv_pt_pairs(dataset, assert_tests=False):
+    """
+    Generate document-label pairs with their associated embeddings. Matches the embeddings so
+    future analytics does not rely on re-encoding data, as BERT Encodings take a while to perform.
+
+    Yields (document summary, document embedding) and (label text, label encoding)
+    """
     processed_embeddings = torch.load(f"./processed_data/DBPEDIA_{dataset}_embeddings.pt")
     processed_labels = torch.load(f"./processed_data/DBPEDIA_{dataset}_labels.pt")
     doc_gen = gen_from_data(f"./dbpedia_data/DBPEDIA_{dataset}.csv")
