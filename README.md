@@ -416,5 +416,5 @@ Renato Zimmermann
 - include graph in intro which highlights the difference between standard multi-class classification
 and our hierarchical multi-label classification
 - add in RNNEncoder model
-
+- add CSC413 RNN notebook citation
 
