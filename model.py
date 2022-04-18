@@ -5,6 +5,8 @@ from torch.utils.data import Dataset
 
 from utilities import make_layer_mult_mlp, to_one_hot
 
+glove = torchtext.vocab.GloVe(name="6B", dim=50)
+
 
 class DBPedia(Dataset):
     """Dataset object for retrieving document embeddings and processed labels
@@ -67,6 +69,26 @@ class BaselineMLP(nn.Module):
             preds.append(clf)
 
         return preds
+
+
+class EncoderRNN(nn.Module):
+    """Simple RNN encoder used for comparisson with BERT encoder.
+    """
+
+    def __init__(self, input_size=50, hidden_size=768):
+        """Initialize model.
+        """
+        super(EncoderRNN, self).__init__()
+        self.emb = nn.Embedding.from_pretrained(glove.vectors)
+        self.hidden_size = hidden_size
+        self.rnn = nn.RNN(input_size, hidden_size, batch_first=True)
+
+    def forward(self, x):
+        # Look up the embedding
+        x = self.emb(x)
+        # Forward propagate the RNN
+        out, last_hidden = self.rnn(x)
+        return last_hidden
 
 
 class HierarchicalRNN(nn.Module):

@@ -19,7 +19,7 @@ if __name__ == "__main__":
 
 
     # how much data to load
-    train_obs = 5000
+    train_obs = 100
     val_obs = 36003
     test_obs = 60794
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -76,9 +76,9 @@ if __name__ == "__main__":
     train_opts = {
         "calc_acc_every": 4,
         "num_epochs": 100,
-        "checkpoint_path": './checkpoints/',
-        "load_checkpoint": True,
-        "load_checkpoint_path": './checkpoints/18-04-2022 11:19:48/model_18-04-2022 11:19:48_20',
+        # "checkpoint_path": './checkpoints/',
+        # "load_checkpoint": True,
+        # "load_checkpoint_path": './checkpoints/18-04-2022 11:19:48/model_18-04-2022 11:19:48_20',
         "optimizer": "adam",
         "tf_init": 0, 
         "tf_decay": 0.5
