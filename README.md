@@ -511,7 +511,7 @@ Keith Allatt
 - Data cleaning, involving CSV file conversion and reading (in conjunction with Renato's work)
 - Utility functions used throughout project, such as training function (In conjunction with Renato's work)
   - Including a number of functions in `utilities.py`
-  - Helper function in general
+  - Helper functions in general
 
 Brandon Jaipersaud
 - Introduction, Model, Data, Results sections of the report
