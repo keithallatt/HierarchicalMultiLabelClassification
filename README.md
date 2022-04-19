@@ -196,7 +196,28 @@ There is also the option to pad each article so they are the same length but we 
 
 ## Training
 
-### Training Curve
+### Training and Loss Curves
+
+Our final model uses the hyperparameters discussed in the Hyperparameter Tuning section. It was trained on 12,0000 points from the training set for 14 epochs. Below are the loss and accuracy curves computed across all 3 categories: L1, L2 and L3. To avoid cluttering the report, we have omitted including the per-category curves since they look nearly identical to the cross-category curves. However, we have included them all in final_model_stats/.  
+
+
+<div class="row">
+  <div class="column">
+    <img src="final_model_stats/total_loss.png" width="40%">
+  </div>
+  <div class="column">
+    <img src="final_model_stats/total_accuracy.png" width="40%">
+  </div>
+</div>
+
+
+Final L1 Test Accuracy: 0.9822
+
+Final L2 Test Accuracy: 0.9093
+
+Final L3 Test Accuracy: 0.83
+
+Final Total Test Accuracy: 0.9072
 
 ### Hyperparameter Tuning 
 We first ran a grid-search over three candidate hyperparameters: learning rate, weight decay, and momentum, to find a reasonable baseline model and narrow the values that randomized search could take on. The values for the grid search try to cover the extremes of each variable domain. The tables below show the accuracy of each model on the validation set after 10 epochs of training, distinguished by learning rate with weight decay values on the left and momentum values on the right. Note that the definition of accuracy for our task of HMLC will be defined and discussed in the Quantitative Measures section below.
@@ -334,34 +355,16 @@ To further test if our model correctly learns the dependencies between different
 
 ### Final Model Performance
 
-
-Our final model uses the hyperparameters discussed in the Hyperparameter Tuning section. It was trained on 12,0000 points from the training set for 14 epochs. Below are the loss and accuracy curves computed across all 3 categories: L1, L2 and L3. To avoid cluttering the report, we have omitted including the per-category curves since they look nearly identical to the cross-category curves. However, we have included them all in final_model_stats/.    
-
-
-<div class="row">
-  <div class="column">
-    <img src="final_model_stats/total_loss.png" width="40%">
-  </div>
-  <div class="column">
-    <img src="final_model_stats/total_accuracy.png" width="40%">
-  </div>
-</div>
+Refer to the Training section to see the learning+loss curves of our final model.
 
 
-**Insert final accuracies here:**
 
 
-Final L1 Test Accuracy: 0.9822
 
-Final L2 Test Accuracy: 0.9093
-
-Final L3 Test Accuracy: 0.83
-
-Final Total Test Accuracy: 0.9072
 
 ### Justification of Results
 
-Based on the results collected in the previous section, we claim that our model performs very reasonably. From the benchmarking table, we observe that our model (the `Original` model) performs significantly better than simply choosing the most common class in each category (`ChooseCommonClass`). It is surprising to see that the `EncoderRNN` model performs similarly to `ChooseCommonClass`. In other words, if we replaced the BERT encoder in our model with a GloVe embedding+GRU based encoder, it will perform nearly the same as `ChooseCommonClass`; An undesirable outcome! Another surprising result is that replacing our stacked MLP+GRU+MLP decoder with only classifier MLPs (i.e. the `BaselineMLP` model), performs similarly to our model. Furthermore, the `BaselineMLP` trains much faster than our model and achieves the same total test accuracy as our model by a factor of 3-4 less epochs. This is interesting and may suggest that our decoder doesn't learn the dependencies between the different categories as we initially hypothesized. This means that most of our models' success can be attributed to the BERT encoder. Its omission leads to poor results and its inclusion, paired with a weaker decoder leads to similar results. **Talk more about why BERT is good here**. Nevertheless, our model still has very good performance for this unique classification task. The loss and accuracy curves have healthy shapes that indicate our model is training effectively. The final L1/L2/L3/total accuracies are also high. They can be ranked as follows: L1 > L2 > L3. This is because of the varying number of classes in each category. It is impressive that our model achieves roughly **80% update** L3 test accuracy given that there are 219 L3 classes.
+Based on the results collected in the previous section, we claim that our model performs very reasonably. From the benchmarking table, we observe that our model (the `Original` model) performs significantly better than simply choosing the most common class in each category (`ChooseCommonClass`). It is surprising to see that the `EncoderRNN` model performs similarly to `ChooseCommonClass`. In other words, if we replaced the BERT encoder in our model with a GloVe embedding+GRU based encoder, it will perform nearly the same as `ChooseCommonClass`; An undesirable outcome! Another surprising result is that replacing our stacked MLP+GRU+MLP decoder with only classifier MLPs (i.e. the `BaselineMLP` model), performs similarly to our model. Furthermore, the `BaselineMLP` trains much faster than our model and achieves the same total test accuracy as our model by a factor of 3-4 less epochs. This is interesting and may suggest that our decoder doesn't learn the dependencies between the different categories as we initially hypothesized. This means that most of our models' success can be attributed to the BERT encoder. Its omission leads to poor results and its inclusion, paired with a weaker decoder leads to similar results. **Talk more about why BERT is good here**. Nevertheless, our model still has very good performance for this unique classification task. The loss and accuracy curves have healthy shapes that indicate our model is training effectively. The final L1/L2/L3/total accuracies are also high. They can be ranked as follows: L1 > L2 > L3. This is because of the varying number of classes in each category. It is impressive that our model achieves 83% L3 test accuracy given that there are 219 L3 classes.
 
 
 Lastly, as can be seen from the "Overfitting to a Small Dataset" table in the previous section, our model overfits to each dataset in a small number of epochs. The L2 and L3 based datasets require more epochs to reach near 100% accuracy  since they contain much more classes than the L1 based dataset. This further convinced us of the correctness of our model.
@@ -418,16 +421,6 @@ Renato Zimmermann
 
 
 
----
 
-### TODOs
 
-- update teacher forcing probability in model
-- rescale model diagram so it looks good on main Github page
-- can add Latex support to model explanations (i.e. L subscript 1 instead of L1)
-- highlight where GRU parameters come from in the model parameters section
-- include graph in intro which highlights the difference between standard multi-class classification
-and our hierarchical multi-label classification
-- add in RNNEncoder model
-- add CSC413 RNN notebook citation
 

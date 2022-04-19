@@ -175,7 +175,10 @@ class BaselineMLP(nn.Module):
 
 
 class EncoderRNN(nn.Module):
-    """Simple RNN encoder used for comparison with BERT encoder.
+    """Simple RNN encoder which uses GloVe embeddings + GRU for encoding articles.
+       Used for comparison with BERT encoder.
+
+       Inspired by CSC413 RNN Google Colab notebook: rnn_notebook.ipynb
     """
 
     def __init__(self, input_size=50, hidden_size=768):
