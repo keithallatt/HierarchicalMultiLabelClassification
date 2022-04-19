@@ -526,7 +526,11 @@ David Chen
 
 Renato Zimmermann
 
-
+- design and implementation of our main encoder-decoder model
+  - HierarchicalRNN
+  - encoding the articles to BERT embeddings
+    - i.e. process_documents() in data_cleaning.py
+  - model training and accuracy functions
 
 
 
