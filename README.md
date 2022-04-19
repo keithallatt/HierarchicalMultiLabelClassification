@@ -507,6 +507,7 @@ Even with the amount of data, the model is still limited by the labels it has ac
 ## Task Distribution
 
 Keith Allatt
+- Successful/Unsuccessful Model Classification sections of the report
 
 Brandon Jaipersaud
 - Introduction, Model, Data, Results sections of the report
@@ -515,6 +516,7 @@ Brandon Jaipersaud
 - Model debugging via. `gen_small_datasets.py` 
 
 David Chen
+- Training and Ethical Implications sections of the report
 
 Renato Zimmermann
 
