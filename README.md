@@ -158,6 +158,105 @@ From the above table, we see that the total number of trainable parameters used 
 
 ### Successful/Unsuccessful Model Classification
 
+Below are a series of Wikipedia article summaries found in the DBPedia testing set. As our model classifies each
+article summary at 3 levels, examples of successful and unsuccessful classifications are provided for each level,
+as well as an example of a successful and unsuccessful classification at all 3 levels simultaneously.
+
+---
+Here is a summary that our model incorrectly classifies at all levels.
+
+
+```
+"The Wildman River is a river in the Darwin Coastal bioregion of the Northern Territory, Australia."
+```
+
+At the L1 level, the correct label is `Place`, but our model predicted `Species`.
+
+At the L2 level, the correct label is `Stream`, but our model predicted `Animal`.
+
+At the L3 level, the correct label is `River`, but our model predicted `Fish`.
+
+---
+
+Here is a summary that our model correctly classifies at all levels.
+
+
+```
+Hirfanlı Dam is a dam in Turkey. The development was backed by the Turkish State Hydraulic Works. It was built by Wimpey Construction and was completed in 1959.
+```
+
+At the L1 level, the correct label is `Place`, and our model correctly predicted this.
+
+At the L2 level, the correct label is `Infrastructure`, and our model correctly predicted this.
+
+At the L3 level, the correct label is `Dam`, and our model correctly predicted this.
+
+---
+
+Here is a summary that our model incorrectly classifies at the L1 level.
+
+
+```
+"The inaugural Singapore League Cup was held in 2007. The tournament was held before the start of the S.League season that year. Prior to this tournament, there is another tournament with the same name that was held until in 1997 where the Singapore Armed Forces had defeated Geylang United by 1-0 in the final. However that old Singapore League Cup was subsequently renamed into present Singapore Cup and evolved to be the major cup competition in Singapore football. In recent years, invitational foreign teams participated in the Singapore Cup along with the local clubs. The League Cup, however, is solely reserved for domestic clubs. The 2007 competition was sponsored by SingTel, and officially titled the SingTel League Cup. A direct knockout format was used, with the first round being the quarter-final stage as only eight out of the twelve S.League teams participated in the competition. The 4 teams who withdrew due to prior pre-season commitments were: \n*  23x Geylang United \n*  23x Liaoning Guangyuan FC \n*  23x SAFFC \n*  23x Young Lions The winners received a prize of S$20,000 with the runners-up and second runners-up taking home S$10,000 and S$5,000 respectively. Woodlands Wellington defeated Sengkang Punggol 4-0 in the final to win the first Singapore League Cup. Gombak United defeated Home United in the third-place match 9-8 on penalties following a 1-1 draw."
+```
+
+At the L1 level, the correct label is `Event`, but our model predicted `Agent`.
+
+---
+
+Here is a summary that our model correctly classifies at the L1 level.
+
+
+```
+"Liu Chao-shiuan (Chinese: 劉兆玄; pinyin: Liú Zhàoxuán; born May 10, 1943) is a Taiwanese educator and politician. He is a former president of the National Tsing Hua University (1987–1993) and Soochow University (2004–2008) and a former Premier of the Republic of China (2008–2009)."
+```
+
+At the L1 level, the correct label is `Agent`, and our model correctly predicted this.
+
+---
+
+Here is a summary that our model incorrectly classifies at the L2 level.
+
+
+```
+"Michelle Maylene (born January 20, 1987) is an actress, adult model, and former adult film star."
+```
+
+At the L2 level, the correct label is `Actor`, but our model predicted `Person`.
+
+---
+
+Here is a summary that our model correctly classifies at the L2 level.
+
+
+```
+"Grote Prijs Stad Zottegem is a single-day road bicycle race held annually in August in Zottegem, Belgium. Since 2005, the race is organized as a 1.1 event on the UCI Europe Tour. The race started out as 'Dokter Tistaertprijs' in 1934. Between 1971 and 1998 it was called 'Herinneringsprijs Dokter Tistaert - Prijs Groot-Zottegem'. In 1999 it changed to 'G.P. Zottegem - Tistaertprijs' and since 2002 it has the current name."
+```
+
+At the L2 level, the correct label is `Race`, and our model correctly predicted this.
+
+---
+
+Here is a summary that our model incorrectly classifies at the L3 level.
+
+
+```
+"Johannes Petrus \""Hans\"" Nijman (September 23, 1959 – November 5, 2014) was a Dutch former professional mixed martial artist and professional wrestler. He competed in the heavyweight division. He was a RINGS Holland veteran and fought for many other top promotions such as Pride FC and It's Showtime. Nijman is believed to have had connections with Willem Holleeder and other big names in the Dutch criminal underworld. His name appeared in several police records and has also been used in big court cases."
+```
+
+At the L3 level, the correct label is `MartialArtist`, but our model predicted `AmateurBoxer`.
+
+---
+
+Here is a summary that our model correctly classifies at the L3 level.
+
+
+```
+"Brekke Church (Norwegian: Brekke kyrkje) is a parish church in Gulen Municipality in Sogn og Fjordane county, Norway. It is located in the village of Brekke. The church is part of the Brekke parish in the Nordhordland deanery in the Diocese of Bjørgvin. The white, wooden church, which has 390 seats, was consecrated on 19 November 1862 by the local Dean Thomas Erichsen. The architect Christian Henrik Grosch made the designs for the church, which is the third church on the site."
+```
+
+At the L3 level, the correct label is `HistoricBuilding`, and our model correctly predicted this.
+
 
 ## Data
 
@@ -355,7 +454,7 @@ To further test if our model correctly learns the dependencies between different
 
 ### Final Model Performance
 
-Refer to the Training section to see the learning+loss curves of our final model.
+Refer to the Training section to see the learning+loss curves as well as the final test accuracies of our final model.
 
 
 

@@ -528,7 +528,7 @@ def get_param_sizes(model):
     return ret
 
 
-def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"):
+def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test", exemptions=None):
     """
     Finds an example, looking for either a correct classification or an incorrect classification.
 
@@ -538,11 +538,18 @@ def find_example(model, l1=True, l2=True, l3=True,  matches=True, dataset="test"
     :param l3: Find a correct/incorrect classification at the l3 level.
     :param matches: True if looking for a correct classification, False for an incorrect classification.
     :param dataset: The data set to look for examples in; by default, the testing set.
+    :param exemptions: Examples to ignore.
     :return: A wiki summary, the predicted labels, the actual labels.
     """
+    if exemptions is None:
+        exemptions = []
 
     for docs, labs in csv_pt_pairs(dataset):
         summary, doc_embedding = docs
+
+        if summary in exemptions:
+            continue
+
         label_text, label_emb = labs
 
         doc_embedding = doc_embedding.reshape((1, doc_embedding.shape[0]))
@@ -586,23 +593,19 @@ def find_correct_classifications(model, opts, device, word_mapping: WordIdMappin
         print("checkpointed model loaded!")
         model.load_state_dict(torch.load(load_checkpoint_path, map_location=torch.device(device)))
 
-    example_parameters = [
-    ]
+    example_parameters = [(True, True, True, False), (True, True, True, True)]
 
     for i in range(3):
-        p = [False, False, False, False]
-        p[i] = True
-        example_parameters.append(tuple(p))
-        p[-1] = True
-        example_parameters.append(tuple(p))
+        example_parameters.append(tuple([i == j for j in range(4)]))
+        example_parameters.append(tuple([i == j or j == 3 for j in range(4)]))
 
-    example_parameters.append((True, True, True, False))
-    example_parameters.append((True, True, True, True))
+    printed_results = []
 
-    printed_results = [r"### Classifications"]
+    examples_used = []
 
     for parameter in example_parameters:
-        doc_sum, labels, predictions = find_example(model, *parameter, dataset=dataset)
+        doc_sum, labels, predictions = find_example(model, *parameter, dataset=dataset, exemptions=examples_used)
+        examples_used.append(doc_sum)
         l1, l2, l3, matches = parameter
 
         levels_at = [
@@ -611,7 +614,7 @@ def find_correct_classifications(model, opts, device, word_mapping: WordIdMappin
 
         printed_results.append("---")
 
-        levels_at = ", ".join(levels_at) + " " + ("levels" if len(levels_at) > 1 else 'level')
+        levels_at = (", ".join(levels_at) + " level" if len(levels_at) != 3 else 'all levels')
 
         printed_results.append(f"Here is a summary that our model {'correctly' if matches else 'incorrectly'} classifies at the {levels_at}.\n")
 
@@ -621,12 +624,12 @@ def find_correct_classifications(model, opts, device, word_mapping: WordIdMappin
             if [l1, l2, l3][i]:
                 correct_label = word_mapping.get_word_from_id(i, int(labels[i]))
                 if matches:
-                    printed_results.append(f"At the L{i+1} level, the correct label is {correct_label}, "
-                                           f"and our AI correctly predicted this.")
+                    printed_results.append(f"At the L{i+1} level, the correct label is `{correct_label}`, "
+                                           f"and our model correctly predicted this.")
                 else:
                     prediction_label = word_mapping.get_word_from_id(i, predictions[i])
-                    printed_results.append(f"At the L{i+1} level, the correct label is {correct_label},"
-                                           f" but our AI predicted {prediction_label}.")
+                    printed_results.append(f"At the L{i+1} level, the correct label is `{correct_label}`,"
+                                           f" but our model predicted `{prediction_label}`.")
 
     return "\n\n".join(printed_results)
 
