@@ -480,6 +480,7 @@ Even though the BERT model is pre-trained on neutral data from Wikipedia and Boo
 However, a helpful application of our model could be to summarize and label text documents or newspapers since they are similar in style and content to Wikipedia articles. For example, as a student, they would be able to input a Wikipedia article or piece of text and the model would return the prediction labels, one from each L1, L2, and L3. The labels could help the student decide if the article is relevant to the topic of interest, saving them time from having to read through the article. Additionally, news/content websites can use our model to label stories and documents they receive. Then, the users would be able to see these tags under each article. This would help people filter which pieces of text they would enjoy reading or are relevant to their topic of search instead of skimming bits of text in each article.
 
 Are there limitations of your model? Your training data? 
+
 Even with the amount of data, the model is still limited by the labels it has access to in the data. The main limitation between our model and human classification is that our model cannot classify with a label it has no knowledge of, even if it is apparent to a human what the labels should be. Additionally, the labels in the training data are inherently biased because people manually provide the training data labels, which may not always be the most correct labels, and this bias will always be present in the model as a result of training on this data. 
 
 
@@ -521,6 +522,7 @@ Brandon Jaipersaud
 
 David Chen
 - Training and Ethical Implications sections of the report
+- Hyperparameter tuning and generating comparison models in `utilities.py`
 
 Renato Zimmermann
 
