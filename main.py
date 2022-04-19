@@ -96,15 +96,11 @@ if __name__ == "__main__":
 
     # needed to load pickle file.
 
-
-
-    from data_cleaning import WordIdMapping
-
-    options = {
-        'load_checkpoint': True,
-        'load_checkpoint_path': "./checkpoints/18-04-2022 16:20:40/model_18-04-2022 16:20:40_14"
-    }
-
-    data_mapping = pickle.load(open('./processed_data/mapping.pkl', 'rb'))
-    res = find_correct_classifications(model, opts=options, device=device, word_mapping=data_mapping)
-    print(res)
+    # from data_cleaning import WordIdMapping
+    # options = {
+    #     'load_checkpoint': True,
+    #     'load_checkpoint_path': "./checkpoints/18-04-2022 16:20:40/model_18-04-2022 16:20:40_14"
+    # }
+    # data_mapping = pickle.load(open('./processed_data/mapping.pkl', 'rb'))
+    # res = find_correct_classifications(model, opts=options, device=device, word_mapping=data_mapping)
+    # print(res)

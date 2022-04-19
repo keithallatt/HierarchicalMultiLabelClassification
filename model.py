@@ -15,7 +15,7 @@ Author(s): Renato Zimmermann, Brandon Jaipersaud
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+import torch.nn.functional as f
 from torch.utils.data import Dataset
 
 import torchtext
@@ -48,7 +48,6 @@ class DBPedia(Dataset):
     def __getitem__(self, idx):
         """Get data from an embedded document and label."""
         return self.embs[idx], self.labs[idx]
-
 
 
 class HierarchicalRNN(nn.Module):
@@ -125,7 +124,7 @@ class HierarchicalRNN(nn.Module):
 
             preds.append(clf)
             in_data = torch.argmax(clf, axis=1) if true_labs is None \
-                      else true_labs[:,i]
+                      else true_labs[:, i]
             in_data = to_one_hot(in_data, d=self.output_sizes[i], device=device)
             last_hidden = hid
 

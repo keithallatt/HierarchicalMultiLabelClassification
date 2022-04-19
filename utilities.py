@@ -96,13 +96,13 @@ def load_data(infile: str) -> object:
         return pickle.load(file)
 
 
-
 def to_one_hot(z: torch.tensor, d: int, device="cpu") -> torch.tensor:
     """
     Convert z('s) into one hot vectors of size d.
 
     :param z: The list of indices.
     :param d: The dimensionality.
+    :param device: Device on which data is being processed (cuda or cpu)
     :returns A NumPy array of one hot vectors.
     """
     return torch.eye(d)[z].to(device)

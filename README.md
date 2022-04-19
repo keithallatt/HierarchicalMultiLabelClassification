@@ -508,6 +508,10 @@ Even with the amount of data, the model is still limited by the labels it has ac
 
 Keith Allatt
 - Successful/Unsuccessful Model Classification sections of the report
+- Data cleaning, involving CSV file conversion and reading (in conjunction with Renato's work)
+- Utility functions used throughout project, such as training function (In conjunction with Renato's work)
+  - Including a number of functions in `utilities.py`
+  - Helper function in general
 
 Brandon Jaipersaud
 - Introduction, Model, Data, Results sections of the report

@@ -136,7 +136,7 @@ def gen_from_data(infile: Union[str, Path]) -> Generator[tuple, None, None]:
     with open(infile, mode='r') as file:
         # reads file in, line by line.
         csv_file = iter(file)
-        next(csv_file) # skip header
+        next(csv_file)  # skip header
         for line in csv_file:
             line = line.split(',')
             # get l1, l2, and l3 category
@@ -208,14 +208,14 @@ def csv_pt_pairs(dataset, assert_tests=False):
 
         i = 0
         for doc, labels in tqdm(doc_gen):
-                # do an integrity check on all the documents and labels.
-                doc = doc.translate(rm_punct)[:510]
-                tok_in = tokenizer(doc, return_tensors="pt", padding=True)
-                emb = model(**tok_in).pooler_output.squeeze().detach()
-                emb_squeeze = emb.squeeze()
-                sum_diff = float(torch.sum(torch.abs(emb_squeeze - processed_embeddings[i])).detach())
-                assert sum_diff <= 0.015, f"Sum difference too high. {i=}"  # test set had max diff of 0.008
-                i += 1
+            # do an integrity check on all the documents and labels.
+            doc = doc.translate(rm_punct)[:510]
+            tok_in = tokenizer(doc, return_tensors="pt", padding=True)
+            emb = model(**tok_in).pooler_output.squeeze().detach()
+            emb_squeeze = emb.squeeze()
+            sum_diff = float(torch.sum(torch.abs(emb_squeeze - processed_embeddings[i])).detach())
+            assert sum_diff <= 0.015, f"Sum difference too high. {i=}"  # test set had max diff of 0.008
+            i += 1
 
         return
 
@@ -235,9 +235,8 @@ if __name__ == '__main__':
 
     # process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
     #                    for name in ["l2_l1_Agent_dep"]])
-    #process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
-    #                   for name in ["train", "val", "test"]])
-
+    # process_documents([f"./dbpedia_data/DBPEDIA_{name}.csv"
+    #                    for name in ["train", "val", "test"]])
 
     # for d, ls in g:
     #     print(d[:min(len(d), 100)], ls)
