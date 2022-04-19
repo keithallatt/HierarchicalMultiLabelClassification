@@ -9,6 +9,8 @@ encoder implementation: EncoderRNN
 
 Note that our primary/final model uses the HierarchicalRNN decoder paired with a BERT encoder used
 in process_documents() in data_cleaning.py.
+
+Author(s): Renato Zimmermann, Brandon Jaipersaud 
 """
 
 import torch

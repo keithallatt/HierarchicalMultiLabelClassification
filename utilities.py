@@ -5,7 +5,7 @@ A variety of utility functions such as loading and saving to pickle files, and c
 
 Our model training function is defined here as well.
 
-Author(s): Keith Allatt, Brandon Jaipersaud 
+Author(s): Keith Allatt, Renato Zimmermann, Brandon Jaipersaud,  David Chen  
 """
 import datetime
 from typing import Union, List
