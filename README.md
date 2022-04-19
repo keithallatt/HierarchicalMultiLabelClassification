@@ -519,6 +519,7 @@ Brandon Jaipersaud
 - Model benchmarking experiments
 - Creating granular, per-category accuracies. i.e. L1, L2, L3 accuracies
 - Model debugging via. `gen_small_datasets.py` 
+- Implement model checkpointing 
 
 David Chen
 - Training and Ethical Implications sections of the report
