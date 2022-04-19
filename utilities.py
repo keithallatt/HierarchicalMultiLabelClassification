@@ -96,19 +96,6 @@ def load_data(infile: str) -> object:
         return pickle.load(file)
 
 
-# def to_one_hot(z: Union[int, list], d: int) -> np.ndarray:
-#     """
-#     Convert z('s) into one hot vectors of size d.
-#
-#     :param z: The list of indices.
-#     :param d: The dimensionality.
-#     :returns A NumPy array of one hot vectors.
-#     """
-#     if isinstance(z, int):
-#         z = [z]
-#     identity = np.eye(d, dtype=np.float32)
-#     assert set(z).issubset(set(range(d))), "Invalid data for one hot vector"
-#     return np.array(list(map(identity.__getitem__, z)))
 
 def to_one_hot(z: torch.tensor, d: int, device="cpu") -> torch.tensor:
     """
