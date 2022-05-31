@@ -1,4 +1,4 @@
-# CSC413H5 Final Project -  Hierarchical, Multi-Label Classification on DBPedia
+# Hierarchical, Multi-Label Classification on DBPedia
 
 ## Introduction
 
